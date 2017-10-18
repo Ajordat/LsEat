@@ -1,0 +1,15 @@
+{
+  "uploadOnSave": true,
+  "useAtomicWrites": false,
+  "deleteLocal": false,
+  "hostname": "montserrat.salle.url.edu",
+  "transport": "scp",
+  "port": "22",
+  "username": "ls30687",
+  "password": "P4ssw0rd",
+  "target": "/users/home/alumnes/ls30687/so/practica/picard",
+  "ignore": [
+    "/"
+  ],
+  "watch": []
+}
