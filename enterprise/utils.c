@@ -1,7 +1,5 @@
 #include "utils.h"
 
-char *string;
-
 void debug(char *msg) {
     if (DEBUG) write(STDERR_FILENO, msg, strlen(msg));
 }
@@ -66,6 +64,17 @@ int beginsWith(char *prefix, char *string) {
     return i;
 }
 
+int equals(char *pattern, char *string) {
+    int i;
+    if ((i = beginsWith(pattern, string))) {
+        for (; string[i]; i++)
+            if (string[i] != ' ' && string[i] != '\t')
+                return 0;
+        return i;
+    }
+    return 0;
+}
+
 char checkNumber(const char *word) {
     int i;
     if (word[0] == '\0') return 0;
@@ -73,25 +82,4 @@ char checkNumber(const char *word) {
         if (word[i] < '0' || word[i] > '9')
             return 0;
     return 1;
-}
-
-char *readFileDescriptor(int fd) {
-    char mychar;
-    int index = 0;
-
-    string = malloc(sizeof(char));
-    while (1) {
-        read(fd, &mychar, sizeof(char));
-        string[index] = mychar;
-        if (mychar == '\n' || mychar == '\0') {
-            string[fd ? index - 1 : index] = '\0';
-            return string;
-        }
-        index++;
-        string = realloc(string, sizeof(string) * (index + 1));
-    }
-}
-
-void freeUtilsResources() {
-    free(string);
 }

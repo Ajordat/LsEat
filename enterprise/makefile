@@ -1,6 +1,6 @@
 LOGIN1 = ls30687
 LOGIN2 = ls31285
-GRUP = 18
+GRUP = x
 FASE = 1
 CC = gcc
 CFLAGS = -Wall -Wextra

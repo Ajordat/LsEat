@@ -3,7 +3,6 @@
 
 #include <unistd.h>       //fork, sleep, pause, write
 #include <stdlib.h>       //EXIT_FAILURE, EXIT_SUCCESS, atoi, mallor, realloc
-#include <sys/fcntl.h>
 
 #include "utils.h"
 
@@ -26,24 +25,8 @@ typedef struct {
     char *plat;
 } Command;
 
-typedef struct {
-    char *name;
-    int money;
-    char *ip;
-    int port;
-} Config;
-
-Config config;
-
-void welcomeMessage();
-
-void readConfigFile(char *filename);
 
 void shell();
-
-void controlSigint();
-
-void freeResources();
 
 
 #endif

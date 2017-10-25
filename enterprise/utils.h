@@ -28,8 +28,4 @@ int equals(char *pattern, char *string);
 
 char checkNumber(const char *word);
 
-char * readFileDescriptor(int fd);
-
-void freeUtilsResources();
-
 #endif

@@ -1,40 +1,9 @@
 #include "logica.h"
 
-void welcomeMessage(){
-    char aux[LENGTH];
-    sprintf(aux, "Benvingut %s\n", config.name);
-    write(1, aux, strlen(aux));
-    sprintf(aux, "Tens %d euros disponibles\n", config.money);
-    write(1, aux, strlen(aux));
-    sprintf(aux, "Introdueix comandes...\n");
-    write(1, aux, strlen(aux));
-}
 
 char checkParameters(int index, const char *command, char code) {
     return endOfWord(index, command) ? code : ERR_N_PARAMS;
 }
-
-void readConfigFile(char *filename) {
-    int file;
-    char msg[LENGTH], *aux;
-
-    file = open(filename, O_RDONLY);
-    if (file <= 0) {
-        sprintf(msg, "Error a l'obrir el fitxer %s.\n", filename);
-        write(1, msg, strlen(msg));
-        exit(EXIT_FAILURE);
-    }
-
-    config.name = readFileDescriptor(file);
-    aux = readFileDescriptor(file);
-    config.money = atoi(aux);
-    free(aux);
-    config.ip = readFileDescriptor(file);
-    aux = readFileDescriptor(file);
-    config.port = atoi(aux);
-    free(aux);
-}
-
 
 Command substractCommand(const char *command) {
     int i = 0;
@@ -109,7 +78,21 @@ Command substractCommand(const char *command) {
 }
 
 char *readCommand() {
-    return readFileDescriptor(STDIN);
+    char *string;
+    char mychar;
+    int index = 0;
+
+    string = malloc(sizeof(char));
+    while (1) {
+        read(STDIN, &mychar, 1);
+        string[index] = mychar;
+        if (mychar == '\n') {
+            string[index] = '\0';
+            return string;
+        }
+        index++;
+        string = realloc(string, sizeof(string) * (index + 1));
+    }
 }
 
 char solveCommand(const char *command) {
@@ -140,7 +123,7 @@ char solveCommand(const char *command) {
             break;
         case CODE_DISCONNECT:
             debug("Toca desconnectar\n");
-            freeResources();
+            print("Gràcies per fer servir LsEat. Fins la propera.\n");
             return 1;
         case ERR_UNK_CMD:
             print("Comanda no reconeguda\n");
@@ -158,9 +141,7 @@ char solveCommand(const char *command) {
 void shell() {
     char *command;
     int flag;
-
     do {
-        print(config.name);
         print("> ");
         command = readCommand();
 
@@ -168,18 +149,4 @@ void shell() {
 
         free(command);
     } while (!flag);
-
-}
-
-void freeResources() {
-    print("\nGràcies per fer servir LsEat. Fins la propera.\n");
-    free(config.name);
-    free(config.ip);
-}
-
-void controlSigint() {
-    debug("\nSIGINT REBUT");
-    freeResources();
-    freeUtilsResources();
-    exit(EXIT_SUCCESS);
 }
