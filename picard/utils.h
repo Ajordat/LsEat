@@ -15,7 +15,10 @@ void print(char * msg);
 void printc(char mychar);
 void printi(int myint);
 
+char *getWord(int *index, const char *string);
+char endOfWord(int index, const char * string);
 int beginsWith(char* prefix, char* string);
 int equals(char* pattern, char* string);
+char checkNumber(const char *word);
 
 #endif

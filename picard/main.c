@@ -9,6 +9,8 @@
 
 int main(void){
 
+    write(1, "pardals\n", strlen("pardals\n"));
+
     shell();
 
     return EXIT_SUCCESS;
