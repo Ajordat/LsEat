@@ -1,13 +1,25 @@
 #include "logica.h"
 
+char checkProgramArguments(int argc){
+    char aux[LENGTH];
+
+    if (argc != 2) {
+        sprintf(aux, "El format de la crida és incorrecte, ha de ser:\n\tpicard <config_file.dat>\n");
+        print(aux);
+        return 1;
+    }
+    return 0;
+}
+
 void welcomeMessage(){
     char aux[LENGTH];
+
     sprintf(aux, "Benvingut %s\n", config.name);
-    write(1, aux, strlen(aux));
+    print(aux);
     sprintf(aux, "Tens %d euros disponibles\n", config.money);
-    write(1, aux, strlen(aux));
+    print(aux);
     sprintf(aux, "Introdueix comandes...\n");
-    write(1, aux, strlen(aux));
+    print(aux);
 }
 
 char checkParameters(int index, const char *command, char code) {
@@ -21,7 +33,7 @@ void readConfigFile(char *filename) {
     file = open(filename, O_RDONLY);
     if (file <= 0) {
         sprintf(msg, "Error a l'obrir el fitxer %s.\n", filename);
-        write(1, msg, strlen(msg));
+        print(msg);
         exit(EXIT_FAILURE);
     }
 
@@ -33,6 +45,11 @@ void readConfigFile(char *filename) {
     aux = readFileDescriptor(file);
     config.port = atoi(aux);
     free(aux);
+
+    close(file);
+
+    sprintf(msg, "|%s - %d - %s - %d|\n", config.name, config.money, config.ip, config.port);
+    debug(msg);
 }
 
 
@@ -41,6 +58,10 @@ Command substractCommand(const char *command) {
     char *word;
     Command cmd;
 
+    if(command == NULL){
+        cmd.code = ERR_UNK_CMD;
+        return cmd;
+    }
     word = getWord(&i, command);
 
     if (!strcasecmp("CONNECTA", word)) {
@@ -180,6 +201,5 @@ void freeResources() {
 void controlSigint() {
     debug("\nSIGINT REBUT");
     freeResources();
-    freeUtilsResources();
     exit(EXIT_SUCCESS);
 }

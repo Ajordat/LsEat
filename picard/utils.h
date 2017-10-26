@@ -1,5 +1,5 @@
-#ifndef _UTILS_H_
-#define _UTILS_H_
+#ifndef _PICARD_UTILS_H_
+#define _PICARD_UTILS_H_
 
 #include <string.h>       //strlen
 #include <stdio.h>        //sprintf
@@ -30,6 +30,5 @@ char checkNumber(const char *word);
 
 char * readFileDescriptor(int fd);
 
-void freeUtilsResources();
 
 #endif

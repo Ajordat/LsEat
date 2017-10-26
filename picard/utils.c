@@ -1,6 +1,5 @@
 #include "utils.h"
 
-char *string;
 
 void debug(char *msg) {
     if (DEBUG) write(STDERR_FILENO, msg, strlen(msg));
@@ -78,20 +77,18 @@ char checkNumber(const char *word) {
 char *readFileDescriptor(int fd) {
     char mychar;
     int index = 0;
+    char * string;
 
-    string = malloc(sizeof(char));
+    string = NULL;
     while (1) {
         read(fd, &mychar, sizeof(char));
-        string[index] = mychar;
         if (mychar == '\n' || mychar == '\0') {
-            string[fd ? index - 1 : index] = '\0';
+            if(string != NULL)
+                string[fd ? index - 1 : index] = '\0';
             return string;
         }
-        index++;
         string = realloc(string, sizeof(string) * (index + 1));
+        string[index] = mychar;
+        index++;
     }
-}
-
-void freeUtilsResources() {
-    free(string);
 }

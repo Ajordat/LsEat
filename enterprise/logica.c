@@ -1,152 +1,100 @@
 #include "logica.h"
 
+char checkProgramArguments(int argc) {
+    char aux[LENGTH];
 
-char checkParameters(int index, const char *command, char code) {
-    return endOfWord(index, command) ? code : ERR_N_PARAMS;
-}
-
-Command substractCommand(const char *command) {
-    int i = 0;
-    char *word;
-    Command cmd;
-
-    word = getWord(&i, command);
-
-    if (!strcasecmp("CONNECTA", word)) {
-
-        cmd.code = checkParameters(i, command, CODE_CONNECT);
-
-    } else if (!strcasecmp("MOSTRA", word)) {
-
-        free(word);
-        word = getWord(&i, command);
-
-        if (!strcasecmp("MENU", word)) {
-            cmd.code = checkParameters(i, command, CODE_SHOWMENU);
-        } else {
-            cmd.code = ERR_UNK_CMD;
-        }
-
-    } else if (!strcasecmp("DEMANA", word)) {
-
-        free(word);
-        word = getWord(&i, command);
-        if (checkNumber(word)) {
-            cmd.unitats = atoi(word);
-            cmd.plat = getWord(&i, command);
-            if (cmd.plat[0] == '\0') {
-                cmd.code = ERR_N_PARAMS;
-                free(cmd.plat);
-            } else {
-                cmd.code = CODE_REQUEST;
-            }
-        } else {
-            cmd.code = ERR_N_PARAMS;
-        }
-
-    } else if (!strcasecmp("ELIMINA", word)) {
-
-        free(word);
-        word = getWord(&i, command);
-        if (checkNumber(word)) {
-            cmd.unitats = atoi(word);
-            cmd.plat = getWord(&i, command);
-            if (cmd.plat[0] == '\0') {
-                cmd.code = ERR_N_PARAMS;
-                free(cmd.plat);
-            } else {
-                cmd.code = CODE_REMOVE;
-            }
-        } else {
-            cmd.code = ERR_N_PARAMS;
-        }
-
-    } else if (!strcasecmp("PAGAR", word)) {
-
-        cmd.code = checkParameters(i, command, CODE_PAY);
-
-    } else if (!strcasecmp("DESCONNECTA", word)) {
-
-        cmd.code = checkParameters(i, command, CODE_DISCONNECT);
-
-    } else {
-
-        cmd.code = ERR_UNK_CMD;
-    }
-    free(word);
-    return cmd;
-}
-
-char *readCommand() {
-    char *string;
-    char mychar;
-    int index = 0;
-
-    string = malloc(sizeof(char));
-    while (1) {
-        read(STDIN, &mychar, 1);
-        string[index] = mychar;
-        if (mychar == '\n') {
-            string[index] = '\0';
-            return string;
-        }
-        index++;
-        string = realloc(string, sizeof(string) * (index + 1));
-    }
-}
-
-char solveCommand(const char *command) {
-    Command cmd = substractCommand(command);
-
-    switch (cmd.code) {
-        case CODE_CONNECT:
-            debug("Toca connectar\n");
-            print("[Comanda OK]\n");
-            break;
-        case CODE_SHOWMENU:
-            debug("Toca mostrar el menú\n");
-            print("[Comanda OK]\n");
-            break;
-        case CODE_REQUEST:
-            debug("Toca demanar\n");
-            print("[Comanda OK]\n");
-            free(cmd.plat);
-            break;
-        case CODE_REMOVE:
-            debug("Toca eliminar\n");
-            print("[Comanda OK]\n");
-            free(cmd.plat);
-            break;
-        case CODE_PAY:
-            debug("Toca pagar\n");
-            print("[Comanda OK]\n");
-            break;
-        case CODE_DISCONNECT:
-            debug("Toca desconnectar\n");
-            print("Gràcies per fer servir LsEat. Fins la propera.\n");
-            return 1;
-        case ERR_UNK_CMD:
-            print("Comanda no reconeguda\n");
-            break;
-        case ERR_N_PARAMS:
-            print("Nombre de paràmetres incorrecte\n");
-            break;
-        default:
-            print("Comanda no reconeguda\n");
-            break;
+    if (argc != 3) {
+        sprintf(aux,
+                "El format de la crida és incorrecte, ha de ser:\n\tenterprise\t<config_file.dat>\t<menu_file.dat>\n");
+        print(aux);
+        return 1;
     }
     return 0;
 }
 
-void shell() {
-    char *command;
-    int flag;
-    do {
-        print("> ");
-        command = readCommand();
+void readConfigFile(char *filename) {
+    int file;
+    char msg[LENGTH], *aux;
 
-        flag = solveCommand(command);
+    file = open(filename, O_RDONLY);
+    if (file <= 0) {
+        sprintf(msg, "Error a l'obrir el fitxer %s.\n", filename);
+        print(msg);
+        exit(EXIT_FAILURE);
+    }
 
-        free(command);
-    } while (!flag);
+    config.name = readFileDescriptor(file);
+
+    aux = readFileDescriptor(file);
+    config.refresh = atoi(aux);
+    free(aux);
+
+    config.ip_data = readFileDescriptor(file);
+
+    aux = readFileDescriptor(file);
+    config.port_data = atoi(aux);
+    free(aux);
+
+    config.ip_picard = readFileDescriptor(file);
+
+    aux = readFileDescriptor(file);
+    config.port_picard = atoi(aux);
+    free(aux);
+
+    close(file);
+
+    sprintf(msg, "|%s/%d/%s/%d/%s/%d|\n", config.name, config.refresh,
+            config.ip_data, config.port_data,
+            config.ip_picard, config.port_picard);
+    debug(msg);
 }
+
+void readMenuFile(char *filename) {
+    int file, index;
+    char msg[LENGTH], *aux;
+    Dish dish;
+
+    file = open(filename, O_RDONLY);
+    if (file <= 0) {
+        sprintf(msg, "Error a l'obrir el fitxer %s.\n", filename);
+        print(msg);
+        exit(EXIT_FAILURE);     //Falta alliberar recursos
+    }
+
+    menu.menu = NULL;
+    menu.quantity = index = 0;
+
+    while (1) {
+
+        dish.name = readFileDescriptor(file);
+
+        if (dish.name == NULL) {
+            close(file);
+            menu.quantity = index;
+            println("SURT");
+            return;
+        }
+
+        dish.name[strlen(dish.name) - 1] = '\0';
+
+        sprintf(msg, "[(%s)]\n", dish.name);
+        write(1, msg, strlen(msg));
+
+        aux = readFileDescriptor(file);
+        dish.stock = atoi(aux);
+        free(aux);
+
+        aux = readFileDescriptor(file);
+        dish.price = atoi(aux);
+        free(aux);
+
+        menu.menu = realloc(menu.menu, sizeof(Dish) * (index + 1));
+        menu.menu[index].name = dish.name;
+        menu.menu[index].stock = dish.stock;
+        menu.menu[index].price = dish.price;
+
+        index++;
+    }
+}
+
+

@@ -7,22 +7,9 @@
 
 #include "logica.h"
 
-void printDish(Dish dish){
-    char aux[LENGTH];
-    sprintf(aux, "|%s - %d - %d|\n", dish.name, dish.stock, dish.price);
-    print(aux);
-}
-int main(int argc, char **argv) {
+int main(void) {
 
-    checkProgramArguments(argc);
-
-    readConfigFile(argv[1]);
-
-    readMenuFile(argv[2]);
-    int i;
-    for(i = 0; i < menu.quantity; i++){
-        printDish(menu.menu[i]);
-    }
+    readConfigFile(FILE_CONFIG);
 
     return EXIT_SUCCESS;
 }

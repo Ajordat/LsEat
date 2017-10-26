@@ -7,7 +7,7 @@ CFLAGS = -Wall -Wextra
 FILES = main.c logica.c utils.c
 HEADERS = logica.h utils.h
 TEMP_FILES =
-EXE = enterprise
+EXE = data
 
 all: $(FILES) $(HEADERS)
 	$(CC) $(FILES) $(CFLAGS) -o $(EXE)
