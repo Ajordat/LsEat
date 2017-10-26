@@ -1,1 +1,0 @@
-/usr/bin/cc -g  -Wl,--enable-auto-import CMakeFiles/data.dir/logica.c.o CMakeFiles/data.dir/main.c.o CMakeFiles/data.dir/utils.c.o  -o data.exe -Wl,--out-implib,libdata.dll.a -Wl,--major-image-version,0,--minor-image-version,0 
