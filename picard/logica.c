@@ -1,6 +1,6 @@
 #include "logica.h"
 
-char checkProgramArguments(int argc){
+char checkProgramArguments(int argc) {
     char aux[LENGTH];
 
     if (argc != 2) {
@@ -11,7 +11,7 @@ char checkProgramArguments(int argc){
     return 0;
 }
 
-void welcomeMessage(){
+void welcomeMessage() {
     char aux[LENGTH];
 
     sprintf(aux, "Benvingut %s\n", config.name);
@@ -58,7 +58,7 @@ Command substractCommand(const char *command) {
     char *word;
     Command cmd;
 
-    if(command == NULL){
+    if (command == NULL) {
         cmd.code = ERR_UNK_CMD;
         return cmd;
     }
@@ -129,8 +129,9 @@ Command substractCommand(const char *command) {
     return cmd;
 }
 
+
 char *readCommand() {
-    return readFileDescriptor(STDIN);
+    return readFileDescriptor(STDIN_FILENO);
 }
 
 char solveCommand(const char *command) {
@@ -140,6 +141,8 @@ char solveCommand(const char *command) {
         case CODE_CONNECT:
             debug("Toca connectar\n");
             print("[Comanda OK]\n");
+            establishConnection(config.name);
+
             break;
         case CODE_SHOWMENU:
             debug("Toca mostrar el menú\n");
@@ -196,6 +199,8 @@ void freeResources() {
     print("\nGràcies per fer servir LsEat. Fins la propera.\n");
     free(config.name);
     free(config.ip);
+    if (sock > 0)
+        close(sock);
 }
 
 void controlSigint() {

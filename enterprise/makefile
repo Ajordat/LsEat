@@ -4,8 +4,8 @@ GRUP = 18
 FASE = 2
 CC = gcc
 CFLAGS = -Wall -Wextra
-FILES = main.c logica.c utils.c
-HEADERS = logica.h utils.h
+FILES = main.c logica.c utils.c network.c
+HEADERS = logica.h utils.h network.h
 TEMP_FILES =
 EXE = enterprise
 

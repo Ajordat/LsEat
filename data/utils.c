@@ -10,24 +10,26 @@ void print(char *msg) {
 }
 
 void printc(char msg) {
-    write(STDOUT_FILENO, msg, sizeof(char));
+    write(STDOUT_FILENO, &msg, sizeof(char));
 }
 
 char *readFileDescriptor(int fd) {
     char mychar;
-    char * string;
+    char *string;
     int index = 0, length;
 
-    string = malloc(sizeof(char));
+    string = NULL;
+
     while (1) {
         length = (int) read(fd, &mychar, sizeof(char));
-        string[index] = mychar;
         if (mychar == '\n' || mychar == '\0' || !length) {
-            string[index] = '\0';
+            if (string != NULL)
+                string[!length ? index : index - 1] = '\0';
             return string;
         }
-        index++;
         string = realloc(string, sizeof(string) * (index + 1));
+        string[index] = mychar;
+        index++;
     }
 }
 

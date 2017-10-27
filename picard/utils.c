@@ -92,3 +92,4 @@ char *readFileDescriptor(int fd) {
         index++;
     }
 }
+

@@ -6,35 +6,53 @@
 #include <stdlib.h>
 
 #include "utils.h"
+#include "network.h"
 
 
 typedef struct {
-    char *name;
-    int refresh;
-    char *ip_data;
-    int port_data;
-    char *ip_picard;
-    int port_picard;
+	char *name;
+	int refresh;
+	char *ip_data;
+	int port_data;
+	char *ip_picard;
+	int port_picard;
 } Config;
 
-typedef struct{
-    char * name;
-    int stock;
-    int price;
-}Dish;
+typedef struct {
+	char *name;
+	int stock;
+	int price;
+} Dish;
 
 typedef struct {
-    Dish * menu;
-    int quantity;
-}Menu;
+	Dish *menu;
+	int quantity;
+} Menu;
+
+typedef struct {
+	char *name;
+	int money;
+} Picard;
 
 Config config;
 Menu menu;
+int sock_data;
+int sock_picard;
 
 char checkProgramArguments(int argc);
 
 void readConfigFile(char *filename);
 
 void readMenuFile(char *filename);
+
+void listenSocket(int sock);
+
+void attendPetition(int sock);
+
+void connectPicard(int sock, Frame frame);
+
+void freeResources();
+
+void controlSigint();
 
 #endif

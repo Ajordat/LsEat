@@ -11,9 +11,7 @@
 int main(int argc, char **argv) {
     char aux[LENGTH];
 
-    if (argc != 2) {
-        sprintf(aux, "El format de la crida és incorrecte:\n\tpicard <config_file.dat>\n");
-        write(1, aux, strlen(aux));
+    if (checkProgramArguments(argc)) {
         exit(EXIT_FAILURE);
     }
 
@@ -25,6 +23,8 @@ int main(int argc, char **argv) {
     debug(aux);
 
     signal(SIGINT, controlSigint);
+
+    getSocket(config.ip, config.port);
 
     shell();
 

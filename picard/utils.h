@@ -7,6 +7,7 @@
 #include <stdlib.h>       //EXIT_FAILURE, EXIT_SUCCESS, atoi, mallor, realloc
 #include <ctype.h>        //tolower
 
+#define LENGTH 100
 #define DEBUG 0
 
 
