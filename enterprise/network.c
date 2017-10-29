@@ -23,18 +23,19 @@ int createSocket(char *ip, int port) {
 		return -1;
 //		exit(EXIT_FAILURE);         //TODO: Alliberar recursos
 	}
-	print("[Creating socket] -> ");
-	printi(port);
-	print("\n");
+
+	sprintf(aux, "[Creating socket] -> %d\n", port);
+	debug(aux);
 	return sock;
 }
 
 
-void printFrame(Frame frame) {
+void debugFrame(Frame frame) {
 	char aux[LENGTH];
-
-	sprintf(aux, "|%hd|%s|%hd|%s|\n", frame.type, frame.header, frame.length, frame.data);
-	write(1, aux, strlen(aux));
+	if (DEBUG) {
+		sprintf(aux, "|%hd|%s|%hd|%s|\n", frame.type, frame.header, frame.length, frame.data);
+		print(aux);
+	}
 }
 
 void sendFrame(int sock, Frame frame) {
@@ -43,7 +44,7 @@ void sendFrame(int sock, Frame frame) {
 
 	sprintf(aux, "%d", frame.type);
 	write(sock, aux, sizeof(char));
-	write(sock, frame.header, 10 * sizeof(char));
+	write(sock, frame.header, HEADER_SIZE * sizeof(char));
 //	sprintf(aux, "%i", frame.length);
 //	write(sock, aux, sizeof(short));
 	length[0] = (char) ((((frame.length >> 8)) & 0x00FF) + '0');
@@ -59,7 +60,7 @@ Frame readFrame(int sock) {
 	read(sock, &frame.type, sizeof(char));
 	frame.type -= '0';
 
-	read(sock, frame.header, 10 * sizeof(char));
+	read(sock, frame.header, HEADER_SIZE * sizeof(char));
 
 //	read(sock, &frame.length, sizeof(short));
 //	frame.length -= '0';
@@ -74,9 +75,26 @@ Frame readFrame(int sock) {
 	read(sock, frame.data, (size_t) frame.length);
 
 	char aux[LENGTH];
-	sprintf(aux, "[SIZEOF] -> %d\n", (int)sizeof(frame.data));
+	sprintf(aux, "[SIZEOF] -> %d\n", (int) sizeof(frame.data));
 	debug(aux);
-	sprintf(aux, "[LENGTH] -> %d\n", (int)frame.length);
+	sprintf(aux, "[LENGTH] -> %d\n", (int) frame.length);
 	debug(aux);
+	return frame;
+}
+
+Frame createFrame(char type, char * header, char * data){
+	Frame frame;
+	frame.type = type;
+	memset(frame.header, '\0', HEADER_SIZE * sizeof(char));
+	strcpy(frame.header, header);
+
+	if (data == NULL){
+		frame.length = 0;
+		frame.data = NULL;
+	} else {
+		frame.data = malloc(sizeof(char) * strlen(data));
+		strcpy(frame.data, data);
+		frame.length = (short) strlen(frame.data);
+	}
 	return frame;
 }

@@ -51,6 +51,8 @@ void attendPetition(int sock);
 
 void connectPicard(int sock, Frame frame);
 
+void disconnectPicard(int sock, Frame frame);
+
 void freeResources();
 
 void controlSigint();

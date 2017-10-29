@@ -103,11 +103,14 @@ void listenSocket(int sock) {
 	char aux[LENGTH];
 	int new_sock;
 
+	print("Esperant clients...\n");
+
 	listen(sock, MAX_REQUESTS);
 
 	addr_len = sizeof(addr);
 	while (1) {
 
+		debug("[WAITING]\n");
 		if ((new_sock = accept(sock, (void *) &addr, &addr_len)) < 0) {
 			sprintf(aux, "Error a l'establir connexió. 3\n");
 			write(1, aux, strlen(aux));
@@ -126,22 +129,29 @@ void listenSocket(int sock) {
 void attendPetition(int sock) {
 	Frame frame;
 
-	frame = readFrame(sock);
+	do {
+		frame = readFrame(sock);
+		switch (frame.type) {
+			case CODE_CONNECT:
+				debugFrame(frame);
+				connectPicard(sock, frame);
+				break;
 
-	switch (frame.type) {
-		case CODE_CONNECT:
-			printFrame(frame);
-			connectPicard(sock, frame);
-			break;
+			case CODE_DISCONNECT:
+				debugFrame(frame);
+				disconnectPicard(sock, frame);
+				break;
 
-		default:
-			break;
+			default:
+				break;
 
-	}
+		}
+	} while (frame.type != CODE_DISCONNECT);
 }
 
 void connectPicard(int sock, Frame frame) {
-	Picard picard;
+	Picard picard;		//TODO: Això serà un element d'alguna estructura (llista segurament)
+	Frame answer;
 	char *name, *money;
 	int ref, i;
 	char aux[LENGTH];
@@ -171,16 +181,56 @@ void connectPicard(int sock, Frame frame) {
 	debug("[DONE]\n");
 
 
-	printFrame(frame);
+	//frame = getEnterpriseConnection();
+	debug("[SENDING FRAME]\n");
+	answer.type = CODE_CONNECT;
+	memset(answer.header, '\0', HEADER_SIZE * sizeof(char));
+	sprintf(answer.header,
+			"CONOK");            //TODO: Hi haurà algun cas que serà KO, possiblement si s'arriba a un màxim de connexions
+	answer.length = 0;                            //o algo així
+	answer.data = malloc(sizeof(char));
+	answer.data[0] = '\0';
+
+	sendFrame(sock, answer);
+	debugFrame(answer);
+	debug("[SENT]\n");
+
+	sprintf(aux, "Connectant %s\n", picard.name);
+	print(aux);
+
+	free(answer.data);
+	free(frame.data);
+	free(picard.name);    //TODO: Eliminar free
+}
+
+void disconnectPicard(int sock, Frame frame) {
+	Frame answer;
+	char *name;
+	char aux[LENGTH];
+
+	name = malloc(sizeof(char) * (strlen(frame.data) + 1));
+	memset(name, '\0', sizeof(char) * (strlen(frame.data) + 1));
+	strcpy(name, frame.data);
 
 	//frame = getEnterpriseConnection();
 	debug("[SENDING FRAME]\n");
-	frame.type = 0x09;
-	sendFrame(sock, frame);
+	answer.type = CODE_DISCONNECT;
+	memset(answer.header, '\0', HEADER_SIZE * sizeof(char));
+	sprintf(answer.header, "CONOK");					//TODO: Hi haurà algun cas que serà KO, possiblement si s'arriba a un màxim de connexions
+	answer.length = 0;									//o algo així
+	answer.data = malloc(sizeof(char));
+	answer.data[0] = '\0';
+
+	sendFrame(sock, answer);
+
+	debugFrame(answer);
 	debug("[SENT]\n");
 
+	sprintf(aux, "Desconnectant %s\n", name);
+	print(aux);
+	free(name);
+	free(answer.data);
 	free(frame.data);
-	free(picard.name);    //TODO: Eliminar free
 }
 
 
@@ -196,9 +246,12 @@ void freeResources() {
 
 	free(menu.menu);
 
-	close(sock_picard);
+	if (sock_picard > 0)
+		close(sock_picard);
 
-	//TODO: Close sock_data
+	if (sock_data > 0)
+		close(sock_data);
+
 }
 
 void controlSigint() {

@@ -17,12 +17,14 @@
 #define CODE_REMOVE     (char)  0x05
 #define CODE_PAY        (char)  0x06
 
+#define HEADER_SIZE		10
+
 
 typedef struct {
-    char type;
-    char header[10];
-    short length;
-    char *data;
+	char type;
+	char header[10];
+	short length;
+	char *data;
 } Frame;
 
 typedef struct {
@@ -31,18 +33,29 @@ typedef struct {
 	int port;
 } Enterprise;
 
+typedef struct {
+	char *ip;
+	int port;
+} Socket;
+
+
 int sock;
+
 Enterprise enterprise;
 
 
-void establishConnection(char *name, int money);
+char connectEnterprise(char *name, int money);
 
-void getSocket(char *ip, int port);
+void disconnect(char *name);
+
+Frame establishConnection(char *name);
+
+char getSocket(char *ip, int port);
 
 void sendFrame(Frame);
 
 Frame readFrame();
 
-void printFrame(Frame);
+void debugFrame(Frame);
 
 #endif

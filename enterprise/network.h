@@ -21,27 +21,28 @@
 #define CODE_REQUEST    (char)  0x04
 #define CODE_REMOVE     (char)  0x05
 #define CODE_PAY        (char)  0x06
-#define CODE_UPDATE		(char)	0x07
+#define CODE_UPDATE        (char)    0x07
 
-#define LENGTH 100
-#define MAX_REQUESTS 5
-
+#define LENGTH            100
+#define MAX_REQUESTS    5
+#define HEADER_SIZE    10
 
 typedef struct {
-    char type;
-    char header[10];
-    short length;
-    char *data;
+	char type;
+	char header[10];
+	short length;
+	char *data;
 } Frame;
 
 
 int createSocket(char *ip, int port);
 
-void printFrame(Frame frame);
+void debugFrame(Frame frame);
 
 void sendFrame(int sock, Frame frame);
 
 Frame readFrame(int sock);
 
+Frame createFrame(char type, char *header, char *data);
 
 #endif

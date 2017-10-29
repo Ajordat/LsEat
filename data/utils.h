@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <string.h>
 
-#define DEBUG 1
+#define DEBUG 0
 
 
 void debug(char *msg);

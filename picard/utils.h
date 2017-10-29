@@ -8,7 +8,7 @@
 #include <ctype.h>        //tolower
 
 #define LENGTH 100
-#define DEBUG 1
+#define DEBUG 0
 
 
 void debug(char *msg);
@@ -22,10 +22,6 @@ void printi(int myint);
 char *getWord(int *index, const char *string);
 
 char endOfWord(int index, const char *string);
-
-int beginsWith(char *prefix, char *string);
-
-int equals(char *pattern, char *string);
 
 char checkNumber(const char *word);
 

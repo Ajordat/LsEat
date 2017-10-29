@@ -10,8 +10,8 @@
 #include "network.h"
 
 
-#define FILE_CONFIG "configData.dat"
-#define CONNECT_STATUS 1
+#define FILE_CONFIG		"configData.dat"
+#define CONNECT_STATUS 	1
 
 
 typedef struct {

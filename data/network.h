@@ -12,18 +12,21 @@
 #include <sys/socket.h>
 #include <errno.h>
 
+#include "utils.h"
+
 
 #define CODE_CONNECT    (char)  0x01
 #define CODE_DISCONNECT (char)  0x02
 #define CODE_UPDATE		(char)	0x07
 
-#define LENGTH 100
-#define MAX_REQUESTS 5
+#define LENGTH			100
+#define MAX_REQUESTS 	5
+#define HEADER_SIZE		10
 
 
 typedef struct {
     char type;
-    char header[10];
+    char header[HEADER_SIZE];
     short length;
     char *data;
 } Frame;
@@ -31,7 +34,7 @@ typedef struct {
 
 int createSocket(char *ip, int port);
 
-void printFrame(Frame frame);
+void debugFrame(Frame frame);
 
 void sendFrame(int sock, Frame frame);
 

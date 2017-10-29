@@ -1,8 +1,13 @@
-#include <sys/socket.h>
 #include "network.h"
 
-
-void getSocket(char *ip, int port) {
+/**
+ * Funció per obtenir un socket de client a partir d'una direcció ip i un port.
+ *
+ * @param ip 	Direcció ip del socket
+ * @param port 	Port del socket
+ * @return 		0 si ha pogut obrir el socket. Altrament, -1
+ */
+char getSocket(char *ip, int port) {
 	char aux[LENGTH];
 	struct sockaddr_in addr;
 
@@ -10,7 +15,7 @@ void getSocket(char *ip, int port) {
 	if (sock <= 0) {
 		sprintf(aux, "Error a l'establir connexió.\n%s\n", strerror(errno));
 		write(1, aux, strlen(aux));
-		exit(EXIT_FAILURE);         //TODO: Alliberar recursos
+		return -1;
 	}
 
 	addr.sin_family = AF_INET;
@@ -20,57 +25,30 @@ void getSocket(char *ip, int port) {
 	if (connect(sock, (void *) &addr, sizeof(addr)) < 0) {
 		sprintf(aux, "Error a l'establir connexió. 2\n%s\n", strerror(errno));
 		write(1, aux, strlen(aux));
-		exit(EXIT_FAILURE);         //TODO: Alliberar recursos
+		return -1;
 	}
 
+	return 0;
 }
 
-void resolveEnterprise(Frame frame) {
-	int i, j, port;
-	char *aux, *ip;
-
-
-	for (j = 0; frame.data[j] != '&'; j++);
-	j++;
-
-	ip = malloc(sizeof(char));
-	for (i = 0; frame.data[j] != '&'; j++) {
-		ip[i] = frame.data[j];
-		i++;
-		ip = realloc(ip, sizeof(char) * (i + 1));
-	}
-	ip[i] = '\0';
-	j++; //saltem &
-
-	aux = malloc(sizeof(char));
-	for (i = 0; frame.data[j]; j++) {
-		aux[i] = frame.data[j];
-		i++;
-		aux = realloc(aux, sizeof(char) * (i + 1));
-	}
-	aux[i] = '\0';
-	port = atoi(aux);
-	free(aux);
-
-	printf("%s-%d\n", ip, port);    //TODO: PRINTF
-
-	getSocket(ip, port);    //Actualment, si no pot establir la connexió es tanca el programa.
-	free(ip);                //S'ha de canviar per recollir l'error i alliberar els recursos i tancar,
-	//o bé intentar recuperar-se de l'error havent de tornar a demanar a Data (opció correcta)
-
-}
-
-void connectEnterprise(char *name, int money) {
+/**
+ * Funció per enviar a un Enterprise una sol·licitud per connectar-s'hi. Crea una trama, l'envia i en rep la resposta.
+ *
+ * @param name		Nom del picard
+ * @param money		Diners del picard
+ * @return			0 si la sol·licitud ha anat bé. Altrament, !0
+ */
+char connectEnterprise(char *name, int money) {
 	Frame frame;
 	char aux[LENGTH];
 
 	debug("[MAKING FRAME]\n");
-	frame.type = 0x01;
-	memset(frame.header, '\0', 10);
+	frame.type = CODE_CONNECT;
+	memset(frame.header, '\0', HEADER_SIZE * sizeof(char));
 	sprintf(frame.header, "PIC_INF");
 
 	myItoa(money, aux);
-	frame.data = malloc(sizeof(name) + 1 + strlen(aux) * sizeof(char));
+	frame.data = malloc((strlen(name) + 2 + strlen(aux)) * sizeof(char));
 	strcpy(frame.data, name);
 	frame.data[strlen(frame.data) + 1] = '\0';
 	frame.data[strlen(frame.data)] = '&';
@@ -87,25 +65,30 @@ void connectEnterprise(char *name, int money) {
 
 	debug("[READING FRAME]\n");
 	frame = readFrame();
-	debug("[DONE]\n");
+	debugFrame(frame);
 
-	printFrame(frame);
-	free(frame.data);
+	if (frame.data != NULL)
+		free(frame.data);
+
+	return (char) strcmp(frame.header, "CONOK");
 }
 
-void establishConnection(char *name, int money) {
+/**
+ * Funció per demanar a Data un Enterprise al que connectar-se.
+ *
+ * @param name	Nom del picard
+ * @return		Resposta de Data
+ */
+Frame establishConnection(char *name) {
 	Frame frame;
 	char aux[LENGTH];
 
-	frame.type = 0x01;
-	memset(frame.header, '\0', 10);
+	frame.type = CODE_CONNECT;
+	memset(frame.header, '\0', HEADER_SIZE * sizeof(char));
 	sprintf(frame.header, "PIC_NAME");
 
 	frame.data = malloc(sizeof(name));
-//	frame.data = malloc(sizeof(config.name)+1);
 	strcpy(frame.data, name);
-//	frame.data[strlen(config.name)] = '\0';
-
 	frame.length = (short) strlen(frame.data);
 	sprintf(aux, "|%d|%s|%d|%s|\n", frame.type, frame.header, frame.length, frame.data);
 	debug(aux);
@@ -116,19 +99,49 @@ void establishConnection(char *name, int money) {
 
 	frame = readFrame();
 
-
-	printFrame(frame);
-	close(sock);
-
-	//TODO: CONNEXIÓ AMB ENTERPRISE
-	debug("[STARTING ENTERPRISE CONNECTION]\n");
-	resolveEnterprise(frame);
-	debug("[DONE]\n");
-	free(frame.data);
-	connectEnterprise(name, money);    //HARDCODED
-
+	return frame;
 }
 
+/**
+ * Funció per desconnectar el client Picard del servidor Enterprise.
+ *
+ * @param name 	Nom del Picard
+ */
+void disconnect(char * name){
+	Frame frame;
+	char aux[LENGTH];
+
+	frame.type = CODE_DISCONNECT;
+	memset(frame.header, '\0', HEADER_SIZE * sizeof(char));
+	sprintf(frame.header, "PIC_NAME");
+
+	frame.data = malloc(sizeof(name));
+	strcpy(frame.data, name);
+	frame.length = (short) strlen(frame.data);
+	sprintf(aux, "|%d|%s|%d|%s|\n", frame.type, frame.header, frame.length, frame.data);
+	debug(aux);
+
+	sendFrame(frame);
+
+	free(frame.data);
+
+	frame = readFrame();
+
+	debugFrame(frame);
+	free(frame.data);
+
+	if (!strcmp(frame.header, "CONOK"))
+		print("[Desconnecta Enterprise OK]\n");
+	else
+		print("[Desconnecta Enterprise KO]\n");
+}
+
+/**
+ * Funció per enviar una trama.
+ *
+ * @param sock 		Socket de connexió amb el client.
+ * @param frame 	Trama a enviar
+ */
 void sendFrame(Frame frame) {
 	char aux[100];
 	char length[2];
@@ -136,7 +149,7 @@ void sendFrame(Frame frame) {
 	sprintf(aux, "%d", frame.type);
 	write(sock, aux, sizeof(char));
 
-	write(sock, frame.header, 10 * sizeof(char));
+	write(sock, frame.header, HEADER_SIZE * sizeof(char));
 
 	length[0] = (char) ((((frame.length >> 8)) & 0x00FF) + '0');
 	length[1] = (char) ((frame.length & 0x00FF) + '0');
@@ -153,6 +166,12 @@ void sendFrame(Frame frame) {
 	debug("sendFrame()\n");
 }
 
+/**
+ * Funció per rebre una trama.
+ *
+ * @param sock 	Socket de lectura de la trama
+ * @return 		Trama llegida
+ */
 Frame readFrame() {
 	Frame frame;
 	char length[2];
@@ -162,10 +181,8 @@ Frame readFrame() {
 	read(sock, &frame.type, sizeof(char));
 	frame.type -= '0';
 
-	read(sock, frame.header, 10 * sizeof(char));
+	read(sock, frame.header, HEADER_SIZE * sizeof(char));
 
-//	read(sock, &frame.length, sizeof(short));
-//	frame.length -= '0';
 	read(sock, length, 2 * sizeof(char));
 	frame.length = (short) (length[0] - '0');
 	frame.length = (short) ((frame.length << 8) & 0xFF00);
@@ -176,26 +193,17 @@ Frame readFrame() {
 	memset(frame.data, '\0', sizeof(char) * (frame.length + 1));
 	read(sock, frame.data, (size_t) frame.length);
 	frame.data[frame.length] = '\0';
-	/*read(sock, &frame.type, sizeof(char));
-	frame.type -= '0';
-
-	memset(frame.header, '\0', 10);
-	read(sock, frame.header, 10 * sizeof(char));
-
-	read(sock, &frame.length, sizeof(short));
-
-	frame.data = malloc(sizeof(char) * (frame.length + 1));
-	memset(frame.data, '\0', sizeof(char) * (frame.length + 1));
-	read(sock, frame.data, (size_t) frame.length);
-	frame.data[frame.length] = '\0';*/
 
 	return frame;
 }
 
-void printFrame(Frame frame) {
-	char aux[LENGTH + 15];
-	debug("printFrame()\n");
-//	memset(aux, '\0', LENGTH + 15);
-	sprintf(aux, "|%d|%s|%d|%s|\n", frame.type, frame.header, frame.length, frame.data);
-	print(aux);
+/**
+ * Funció per mostrar el contingut d'una trama. Només mostra l'output si DEBUG és diferent a 0.
+ *
+ * @param frame 	Trama a mostrar
+ */
+void debugFrame(Frame frame) {
+	char aux[LENGTH];
+	sprintf(aux, "|%d|%s|%i|%s|\n", frame.type, frame.header, frame.length, frame.data);
+	debug(aux);
 }
