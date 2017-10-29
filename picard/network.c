@@ -58,37 +58,6 @@ void resolveEnterprise(Frame frame) {
 	free(ip);                //S'ha de canviar per recollir l'error i alliberar els recursos i tancar,
 	//o bé intentar recuperar-se de l'error havent de tornar a demanar a Data (opció correcta)
 
-	/*
-
-	int i, j;
-	char *aux;
-
-	enterprise.name = malloc(sizeof(char));
-	for (j = 0; frame.data[j] != '&'; j++) {
-		enterprise.name[j] = frame.data[j];
-		enterprise.name = realloc(enterprise.name, sizeof(char) * (j + 1));
-	}
-	enterprise.name[j] = '\0';
-	j++; //saltem &
-
-	enterprise.ip = malloc(sizeof(char));
-	for (i = 0; frame.data[j] != '&'; i++, j++) {
-		enterprise.ip[i] = frame.data[j];
-		enterprise.ip = realloc(enterprise.ip, sizeof(char) * (i + 1));
-	}
-	enterprise.ip[i] = '\0';
-	j++; //saltem &
-
-	aux = malloc(sizeof(char));
-	for (i = 0; frame.data[j]; i++, j++) {
-		aux[i] = frame.data[j];
-		aux = realloc(aux, sizeof(char) * (i + 1));
-	}
-	aux[i] = '\0';
-	enterprise.port = atoi(aux);
-	free(aux);
-
-	getSocket(enterprise.ip, enterprise.port);*/
 }
 
 void connectEnterprise(char *name, int money) {
@@ -133,9 +102,9 @@ void establishConnection(char *name, int money) {
 	sprintf(frame.header, "PIC_NAME");
 
 	frame.data = malloc(sizeof(name));
-//    frame.data = malloc(sizeof(config.name)+1);
+//	frame.data = malloc(sizeof(config.name)+1);
 	strcpy(frame.data, name);
-//    frame.data[strlen(config.name)] = '\0';
+//	frame.data[strlen(config.name)] = '\0';
 
 	frame.length = (short) strlen(frame.data);
 	sprintf(aux, "|%d|%s|%d|%s|\n", frame.type, frame.header, frame.length, frame.data);
@@ -162,19 +131,31 @@ void establishConnection(char *name, int money) {
 
 void sendFrame(Frame frame) {
 	char aux[100];
+	char length[2];
 
 	sprintf(aux, "%d", frame.type);
 	write(sock, aux, sizeof(char));
+
 	write(sock, frame.header, 10 * sizeof(char));
-	sprintf(aux, "%d", frame.length);
-	write(sock, aux, sizeof(short));
+
+	length[0] = (char) ((((frame.length >> 8)) & 0x00FF) + '0');
+	length[1] = (char) ((frame.length & 0x00FF) + '0');
+	write(sock, length, 2 * sizeof(char));
+//	sprintf(aux, "%i", frame.length);
+//	write(sock, aux, sizeof(short));
+
+//	write(sock, &frame.length, sizeof(short));
+
 	sprintf(aux, "%s", frame.data);
+
 	write(sock, aux, strlen(aux));
+
 	debug("sendFrame()\n");
 }
 
 Frame readFrame() {
 	Frame frame;
+	char length[2];
 
 	debug("readFrame()\n");
 
@@ -183,13 +164,18 @@ Frame readFrame() {
 
 	read(sock, frame.header, 10 * sizeof(char));
 
-	read(sock, &frame.length, sizeof(short));
-	frame.length -= '0';
+//	read(sock, &frame.length, sizeof(short));
+//	frame.length -= '0';
+	read(sock, length, 2 * sizeof(char));
+	frame.length = (short) (length[0] - '0');
+	frame.length = (short) ((frame.length << 8) & 0xFF00);
+	frame.length = (short) (frame.length | (length[1] - '0'));
+
 
 	frame.data = malloc(sizeof(char) * (frame.length + 1));
 	memset(frame.data, '\0', sizeof(char) * (frame.length + 1));
 	read(sock, frame.data, (size_t) frame.length);
-
+	frame.data[frame.length] = '\0';
 	/*read(sock, &frame.type, sizeof(char));
 	frame.type -= '0';
 

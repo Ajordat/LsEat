@@ -151,13 +151,12 @@ void connectPicard(int sock, Frame frame) {
 	debug("[READING FRAME]\n");
 	for (ref = 0; name[ref] != '&'; ref++);
 
-
 	money = malloc(sizeof(char) * (frame.length - ref + 1));
+	memset(money, '\0', sizeof(char) * (frame.length - ref + 1));
 	debug("[READING MONEY]\n");
 	for (i = ref + 1; i < frame.length; i++)
 		money[i - ref - 1] = name[i];
 
-	money[i - ref] = '\0';
 
 	debug("[DONE]\n");
 	sprintf(aux, "[MONEY] -> |%s|\n", money);
