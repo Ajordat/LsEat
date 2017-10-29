@@ -12,6 +12,8 @@
 #include <sys/socket.h>
 #include <errno.h>
 
+#include "utils.h"
+
 
 #define CODE_CONNECT    (char)  0x01
 #define CODE_DISCONNECT (char)  0x02

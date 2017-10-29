@@ -63,6 +63,7 @@ void readMenuFile(char *filename) {
 
 	menu.menu = NULL;
 	menu.quantity = index = 0;
+	dish.name = NULL;
 
 	while (1) {
 
@@ -71,14 +72,13 @@ void readMenuFile(char *filename) {
 		if (dish.name == NULL) {
 			close(file);
 			menu.quantity = index;
-			println("SURT");
 			return;
 		}
 
 		dish.name[strlen(dish.name) - 1] = '\0';
 
 		sprintf(msg, "[(%s)]\n", dish.name);
-		write(1, msg, strlen(msg));
+		debug(msg);
 
 		aux = readFileDescriptor(file);
 		dish.stock = atoi(aux);
@@ -117,7 +117,7 @@ void listenSocket(int sock) {
 
 		attendPetition(new_sock);
 
-		close(new_sock);
+//		close(new_sock);
 
 	}
 
@@ -130,6 +130,7 @@ void attendPetition(int sock) {
 
 	switch (frame.type) {
 		case CODE_CONNECT:
+			printFrame(frame);
 			connectPicard(sock, frame);
 			break;
 
@@ -143,28 +144,44 @@ void connectPicard(int sock, Frame frame) {
 	Picard picard;
 	char *name, *money;
 	int ref, i;
+	char aux[LENGTH];
 
 	name = frame.data;
 
+	debug("[READING FRAME]\n");
 	for (ref = 0; name[ref] != '&'; ref++);
 
-	money = malloc(sizeof(char) * (frame.length - ref));
+
+	money = malloc(sizeof(char) * (frame.length - ref + 1));
+	debug("[READING MONEY]\n");
 	for (i = ref + 1; i < frame.length; i++)
 		money[i - ref - 1] = name[i];
 
 	money[i - ref] = '\0';
+
+	debug("[DONE]\n");
+	sprintf(aux, "[MONEY] -> |%s|\n", money);
+	debug(aux);
+
 	picard.money = atoi(money);
+	free(money);
 	name[ref] = '\0';
-	memset(picard.name, '\0', strlen(name));
-	picard.name = name;
+	picard.name = malloc(sizeof(char) * (strlen(name) + 1));
+	memset(picard.name, '\0', sizeof(char) * (strlen(name) + 1));
+	strcpy(picard.name, name);
+	debug("[DONE]\n");
 
 
 	printFrame(frame);
 
 	//frame = getEnterpriseConnection();
+	debug("[SENDING FRAME]\n");
+	frame.type = 0x09;
 	sendFrame(sock, frame);
+	debug("[SENT]\n");
 
 	free(frame.data);
+	free(picard.name);    //TODO: Eliminar free
 }
 
 
@@ -177,7 +194,11 @@ void freeResources() {
 
 	for (i = 0; i < menu.quantity; i++)
 		free(menu.menu[i].name);
+
+	free(menu.menu);
+
 	close(sock_picard);
+
 	//TODO: Close sock_data
 }
 

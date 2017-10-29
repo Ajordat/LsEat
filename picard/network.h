@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <errno.h>
 
 #include "utils.h"
 
@@ -34,14 +35,14 @@ int sock;
 Enterprise enterprise;
 
 
-void establishConnection(char *name);
+void establishConnection(char *name, int money);
 
 void getSocket(char *ip, int port);
 
-void sendFrame(Frame frame);
+void sendFrame(Frame);
 
 Frame readFrame();
 
-void printFrame(Frame frame);
+void printFrame(Frame);
 
 #endif

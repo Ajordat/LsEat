@@ -16,6 +16,8 @@ void print(char *msg);
 
 void println(char *msg);
 
+void printi(int num);
+
 void printc(char msg);
 
 char *readFileDescriptor(int fd);

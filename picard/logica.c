@@ -141,13 +141,14 @@ char solveCommand(const char *command) {
         case CODE_CONNECT:
             debug("Toca connectar\n");
             print("[Comanda OK]\n");
-            establishConnection(config.name);
-
+            establishConnection(config.name, config.money);
             break;
+
         case CODE_SHOWMENU:
             debug("Toca mostrar el menú\n");
             print("[Comanda OK]\n");
             break;
+
         case CODE_REQUEST:
             debug("Toca demanar\n");
             print("[Comanda OK]\n");

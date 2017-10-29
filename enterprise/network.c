@@ -21,6 +21,8 @@ int createSocket(char *ip, int port) {
 		write(1, aux, strlen(aux));
 		exit(EXIT_FAILURE);         //TODO: Alliberar recursos
 	}
+	print("[Creating socket] -> ");
+	printi(port);
 	return sock;
 }
 
@@ -48,12 +50,15 @@ Frame readFrame(int sock) {
 
 	read(sock, &frame.type, sizeof(char));
 	frame.type -= '0';
+
 	read(sock, frame.header, 10 * sizeof(char));
+
 	read(sock, &frame.length, sizeof(short));
 	frame.length -= '0';
+
 	frame.data = malloc(sizeof(char) * (frame.length + 1));
+	memset(frame.data, '\0', sizeof(char) * (frame.length + 1));
 	read(sock, frame.data, (size_t) frame.length);
-	frame.data[frame.length] = '\0';
 
 	return frame;
 }

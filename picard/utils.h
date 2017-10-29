@@ -4,11 +4,11 @@
 #include <string.h>       //strlen
 #include <stdio.h>        //sprintf
 #include <unistd.h>       //fork, sleep, pause, write
-#include <stdlib.h>       //EXIT_FAILURE, EXIT_SUCCESS, atoi, mallor, realloc
+#include <stdlib.h>       //EXIT_FAILURE, EXIT_SUCCESS, atoi, malloc, realloc
 #include <ctype.h>        //tolower
 
 #define LENGTH 100
-#define DEBUG 0
+#define DEBUG 1
 
 
 void debug(char *msg);
@@ -31,5 +31,6 @@ char checkNumber(const char *word);
 
 char * readFileDescriptor(int fd);
 
+void myItoa(int num, char *buff);
 
 #endif
