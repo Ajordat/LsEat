@@ -220,9 +220,9 @@ char tryConnectionEnterprise(Frame frame) {
 
 	debug("[STARTING ENTERPRISE CONNECTION]\n");
 	if (strcmp(frame.header, "ENT_INF")) { // NOLINT
-		char aux[LENGTH];
-		sprintf(aux, "[Connexió amb Data KO] -> (%s) != (ENT_INF)\n", frame.header);
-		print(aux);
+		print("[Connexió amb Data KO] -> (");
+		print(frame.header);
+		print(")\n");
 		return -1;
 	}
 	print("[Connexió amb Data OK]\n");
@@ -245,6 +245,23 @@ char tryConnectionEnterprise(Frame frame) {
 }
 
 /**
+ * Funció per connectar-se amb un Enterprise. Primer es connecta a Data, recull l'Enterprise que li indica aquest
+ * i s'hi connecta (si pot).
+ *
+ * @return 	1 si aconsegueix connectar-se i 0 si hi ha algun error
+ */
+char initConnection() {
+	Frame frame;
+	print("Connectant amb LsEat...\n");
+	if (getSocket(config.ip, config.port) < 0) {
+		print("[No s'ha pogut connectar amb Data]\n");
+		return 0;
+	}
+	frame = establishConnection(config.name);
+	return (tryConnectionEnterprise(frame) >= 0);
+}
+
+/**
  * Funció per executar la funcionalitat escollida per l'usuari segons la comanda introduïda.
  *
  * @param command 	Comanda introduïda per l'usuari
@@ -252,7 +269,6 @@ char tryConnectionEnterprise(Frame frame) {
  */
 char solveCommand(const char *command) {
 	Command cmd = substractCommand(command);
-	Frame frame;
 	static char connected = 0;
 
 	switch (cmd.code) {
@@ -262,10 +278,7 @@ char solveCommand(const char *command) {
 				print("Ja estàs connectat a un Enterprise!\n");
 				break;
 			}
-			print("Connectant amb LsEat...\n");
-			frame = establishConnection(config.name);
-			if (tryConnectionEnterprise(frame) >= 0)
-				connected = 1;
+			connected = initConnection();
 			break;
 
 		case CODE_SHOWMENU:
@@ -291,6 +304,9 @@ char solveCommand(const char *command) {
 			break;
 
 		case CODE_DISCONNECT:
+			/* TODO: Si connectem amb èxit amb un Enterprise i aquest es tanca abans que fem un DESCONNECTA,
+			 * no alliberem tots els recursos.
+			 * */
 			debug("Toca desconnectar\n");
 			if (connected) {
 				disconnect(config.name);

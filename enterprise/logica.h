@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <sys/fcntl.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include "utils.h"
 #include "network.h"
@@ -47,7 +48,7 @@ void readMenuFile(char *filename);
 
 void listenSocket(int sock);
 
-void attendPetition(int sock);
+void *attendPetition(void *sock);
 
 void connectPicard(int sock, Frame frame);
 

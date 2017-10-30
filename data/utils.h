@@ -3,6 +3,8 @@
 
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
+
 
 #define DEBUG 0
 
@@ -12,5 +14,6 @@ void debug(char *msg);
 void print(char *msg);
 
 char *readFileDescriptor(int fd);
+
 
 #endif

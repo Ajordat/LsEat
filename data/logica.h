@@ -25,7 +25,7 @@ typedef struct {
     char *ip;
     int port;
     int users;
-} Enterprise;
+} Enterprise;		//S'utilitzarà per saber els enterprise dels que es disposa.
 
 
 Config config;

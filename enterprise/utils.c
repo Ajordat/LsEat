@@ -1,29 +1,31 @@
 #include "utils.h"
 
+/**
+ * Funció que escriu el missatge que rep com a paràmetre si DEBUG val diferent a 0.
+ * S'utilitza per depurar.
+ *
+ * @param msg 	Missatge a mostrar
+ */
 void debug(char *msg) {
 	if (DEBUG) write(STDERR_FILENO, msg, strlen(msg));
 }
 
+/**
+ * Funció per printar per pantalla una cadena de caràcters.
+ *
+ * @param msg 	Missatge a mostrar
+ */
 void print(char *msg) {
 	write(STDOUT_FILENO, msg, strlen(msg));
 }
 
-void println(char *msg) {
-	char aux[LENGTH];
-	sprintf(aux, "%s\n", msg);
-	write(STDOUT_FILENO, aux, strlen(aux));
-}
-
-void printi(int num) {
-	char aux[15];
-	sprintf(aux, "%d", num);
-	write(STDOUT_FILENO, aux, strlen(aux));
-}
-
-void printc(char msg) {
-	write(STDOUT_FILENO, &msg, sizeof(char));
-}
-
+/**
+ * Funció per llegir caràcter a caràcter d'un file descriptor i a memòria dinàmica fins a trobar un salt de línia
+ * o un '\0'.
+ *
+ * @param fd	File descriptor
+ * @return		Punter a memòria dinàmica amb el text llegit
+ */
 char *readFileDescriptor(int fd) {
 	char mychar = '\0';
 	int index = 0;

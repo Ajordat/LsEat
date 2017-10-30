@@ -20,11 +20,11 @@ void readConfigFile(char *filename) {
 	config.ip = readFileDescriptor(file);
 
 	aux = readFileDescriptor(file);
-	config.port_picard = atoi(aux);
+	config.port_picard = atoi(aux); // NOLINT
 	free(aux);
 
 	aux = readFileDescriptor(file);
-	config.port_enterprise = atoi(aux);
+	config.port_enterprise = atoi(aux); // NOLINT
 	free(aux);
 
 	sock_picard = sock_enterprise = -1;
@@ -82,6 +82,13 @@ void attendPetition(int sock) {
 	switch (frame.type) {
 		case CODE_CONNECT:
 			connectSocket(sock, frame);
+			break;
+
+		case CODE_DISCONNECT:
+			break;
+
+		case CODE_UPDATE:
+			break;
 
 		default:
 			break;
@@ -113,6 +120,7 @@ void connectSocket(int sock, Frame frame) {
 		sprintf(aux, "Desconnectant %s\n", name);
 		print(aux);
 
+		free(frame.data);
 		free(name);
 	} else {
 		//TODO: Tractar petició Enterprise
@@ -144,9 +152,6 @@ Frame getEnterpriseConnection() {
 		memset(frame.data, '\0', sizeof("Enterprise A&127.0.0.1&8491"));
 		sprintf(frame.data, "Enterprise A&127.0.0.1&8491");
 		frame.length = (short) strlen(frame.data);
-		char aux[LENGTH];
-		sprintf(aux, "[MSG] -> |%s|\n[LENGTH] -> %i\n", frame.data, frame.length);
-		debug(aux);
 	} else {
 		sprintf(frame.header, "CONKO");
 		frame.length = 0;

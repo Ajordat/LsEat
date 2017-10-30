@@ -107,7 +107,7 @@ Frame establishConnection(char *name) {
  *
  * @param name 	Nom del Picard
  */
-void disconnect(char * name){
+void disconnect(char *name) {
 	Frame frame;
 	char aux[LENGTH];
 
@@ -115,7 +115,7 @@ void disconnect(char * name){
 	memset(frame.header, '\0', HEADER_SIZE * sizeof(char));
 	sprintf(frame.header, "PIC_NAME");
 
-	frame.data = malloc(sizeof(name));
+	frame.data = malloc(sizeof(char) * (strlen(name) + 1));
 	strcpy(frame.data, name);
 	frame.length = (short) strlen(frame.data);
 	sprintf(aux, "|%d|%s|%d|%s|\n", frame.type, frame.header, frame.length, frame.data);
@@ -146,21 +146,21 @@ void sendFrame(Frame frame) {
 	char aux[100];
 	char length[2];
 
+	//Escriptura del camp type. 1 byte
 	sprintf(aux, "%d", frame.type);
 	write(sock, aux, sizeof(char));
 
+	//Escriptura del camp header. 10 bytes
 	write(sock, frame.header, HEADER_SIZE * sizeof(char));
 
+	//Escriptura del camp length. 2 bytes. La idea original era enviar un short directament.
+	//No va funcionar i ara envia els dos bytes del short en un array de dos caràcters.
 	length[0] = (char) ((((frame.length >> 8)) & 0x00FF) + '0');
 	length[1] = (char) ((frame.length & 0x00FF) + '0');
 	write(sock, length, 2 * sizeof(char));
-//	sprintf(aux, "%i", frame.length);
-//	write(sock, aux, sizeof(short));
 
-//	write(sock, &frame.length, sizeof(short));
-
+	//Escriptura de la informació de la trama. Mida variable segons el camp length
 	sprintf(aux, "%s", frame.data);
-
 	write(sock, aux, strlen(aux));
 
 	debug("sendFrame()\n");
@@ -178,17 +178,21 @@ Frame readFrame() {
 
 	debug("readFrame()\n");
 
+	//Lectura del camp type. 1 byte
 	read(sock, &frame.type, sizeof(char));
 	frame.type -= '0';
 
+	//Lectura del camp header. 10 bytes
 	read(sock, frame.header, HEADER_SIZE * sizeof(char));
 
+	//Lectura del camp length. 2 bytes. Es llegeix un array de dos caràcters i es volquen en una variable
+	//de tipus short per facilitar el tractament.
 	read(sock, length, 2 * sizeof(char));
 	frame.length = (short) (length[0] - '0');
 	frame.length = (short) ((frame.length << 8) & 0xFF00);
 	frame.length = (short) (frame.length | (length[1] - '0'));
 
-
+	//Lectura del camp data segons la llargada indicada al camp length. Mida variable
 	frame.data = malloc(sizeof(char) * (frame.length + 1));
 	memset(frame.data, '\0', sizeof(char) * (frame.length + 1));
 	read(sock, frame.data, (size_t) frame.length);

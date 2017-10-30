@@ -1,17 +1,29 @@
 #include "logica.h"
 
+/**
+ * Funció per comprovar que el nombre d'arguments sigui correcte.
+ *
+ * @param argc 	Nombre d'arguments
+ * @return 		0 si és correcte. Altrament, 1.
+ */
 char checkProgramArguments(int argc) {
 	char aux[LENGTH];
 
 	if (argc != 3) {
-		sprintf(aux,
-				"El format de la crida és incorrecte, ha de ser:\n\tenterprise\t<config_file.dat>\t<menu_file.dat>\n");
+		sprintf(aux, "El format de la crida és incorrecte, ha de ser:\n");
+		print(aux);
+		sprintf(aux, "\tenterprise\t<config_file.dat>\t<menu_file.dat>\n");
 		print(aux);
 		return 1;
 	}
 	return 0;
 }
 
+/**
+ * Funció per llegir el fitxer de configuració de l'Enterprise.
+ *
+ * @param filename 	Fitxer de configuració de l'Enterprise
+ */
 void readConfigFile(char *filename) {
 	int file;
 	char msg[LENGTH], *aux;
@@ -26,19 +38,19 @@ void readConfigFile(char *filename) {
 	config.name = readFileDescriptor(file);
 
 	aux = readFileDescriptor(file);
-	config.refresh = atoi(aux);
+	config.refresh = atoi(aux); // NOLINT
 	free(aux);
 
 	config.ip_data = readFileDescriptor(file);
 
 	aux = readFileDescriptor(file);
-	config.port_data = atoi(aux);
+	config.port_data = atoi(aux); // NOLINT
 	free(aux);
 
 	config.ip_picard = readFileDescriptor(file);
 
 	aux = readFileDescriptor(file);
-	config.port_picard = atoi(aux);
+	config.port_picard = atoi(aux); // NOLINT
 	free(aux);
 
 	close(file);
@@ -49,6 +61,11 @@ void readConfigFile(char *filename) {
 	debug(msg);
 }
 
+/**
+ * Funció per llegir el fitxer de menú de l'Enterprise.
+ *
+ * @param filename 	Fitxer de menú de l'Enterprise
+ */
 void readMenuFile(char *filename) {
 	int file, index;
 	char msg[LENGTH], *aux;
@@ -58,7 +75,12 @@ void readMenuFile(char *filename) {
 	if (file <= 0) {
 		sprintf(msg, "Error a l'obrir el fitxer %s.\n", filename);
 		print(msg);
-		exit(EXIT_FAILURE);     //Falta alliberar recursos
+
+		free(config.name);
+		free(config.ip_picard);
+		free(config.ip_data);
+
+		exit(EXIT_FAILURE);
 	}
 
 	menu.menu = NULL;
@@ -81,11 +103,11 @@ void readMenuFile(char *filename) {
 		debug(msg);
 
 		aux = readFileDescriptor(file);
-		dish.stock = atoi(aux);
+		dish.stock = atoi(aux); // NOLINT
 		free(aux);
 
 		aux = readFileDescriptor(file);
-		dish.price = atoi(aux);
+		dish.price = atoi(aux); // NOLINT
 		free(aux);
 
 		menu.menu = realloc(menu.menu, sizeof(Dish) * (index + 1));
@@ -97,37 +119,55 @@ void readMenuFile(char *filename) {
 	}
 }
 
+/**
+ * Funció d'escolta del socket. Bloqueja l'execució esperant que un client es connecti al seu port.
+ * Hem intentat que sigui dedicat, però és complicat perquè hi ha un int que no acabem d'alliberar.
+ *
+ * @param sock 	Socket a escoltar
+ */
 void listenSocket(int sock) {
 	struct sockaddr_in addr;
 	socklen_t addr_len;
-	char aux[LENGTH];
-	int new_sock;
+	int *new_sock;
+	pthread_t id;
 
 	print("Esperant clients...\n");
 
 	listen(sock, MAX_REQUESTS);
 
 	addr_len = sizeof(addr);
+
 	while (1) {
 
+		new_sock = malloc(sizeof(int));
+
 		debug("[WAITING]\n");
-		if ((new_sock = accept(sock, (void *) &addr, &addr_len)) < 0) {
-			sprintf(aux, "Error a l'establir connexió. 3\n");
-			write(1, aux, strlen(aux));
+		if ((*new_sock = accept(sock, (void *) &addr, &addr_len)) < 0) {
+			print("Error a l'establir connexió. 3\n");
 			freeResources();
 			exit(EXIT_FAILURE);
 		}
-
-		attendPetition(new_sock);
-
-//		close(new_sock);
-
+		//TODO: Arreglar (i canviar documentació)
+		//Funciona bé, però si rep un SIGINT mentre hi ha un thread obert és una cagada, es queda la
+		//informació del thread sense alliberar. S'ha de trobar una manera millor.
+		//Acabo de descobrir que del normal també queden 4bytes sueltos por ahí, s'ha de demanar ajuda
+		pthread_create(&id, NULL, attendPetition, new_sock);
+		pthread_detach(id);
 	}
 
 }
 
-void attendPetition(int sock) {
+/**
+ * Funció dedicada a un únic socket fins que aquest es desconnecti des de Picard. Aquesta funció es crida
+ * en un thread deatached per a poder tenir diversos Picards de manera simultània.
+ *
+ * @param sock_aux	Socket de la connexió amb el Picard
+ * @return			NULL
+ */
+void *attendPetition(void *sock_aux) {
 	Frame frame;
+	int sock = *((int *) sock_aux);
+	free(sock_aux);
 
 	do {
 		frame = readFrame(sock);
@@ -147,10 +187,20 @@ void attendPetition(int sock) {
 
 		}
 	} while (frame.type != CODE_DISCONNECT);
+
+	close(sock);
+	return NULL;
 }
 
+/**
+ * Funció per a connectar un Picard a l'Enterprise. Rep la petició com a paràmetre i respon al Picard
+ * en qüestió segons si pot connectar-lo.
+ *
+ * @param sock 		Socket de la communicació
+ * @param frame 	Trama rebuda amb informació sobre el Picard.
+ */
 void connectPicard(int sock, Frame frame) {
-	Picard picard;		//TODO: Això serà un element d'alguna estructura (llista segurament)
+	Picard picard;        //TODO: Això serà un element d'alguna estructura (llista segurament)
 	Frame answer;
 	char *name, *money;
 	int ref, i;
@@ -167,12 +217,11 @@ void connectPicard(int sock, Frame frame) {
 	for (i = ref + 1; i < frame.length; i++)
 		money[i - ref - 1] = name[i];
 
-
 	debug("[DONE]\n");
 	sprintf(aux, "[MONEY] -> |%s|\n", money);
 	debug(aux);
 
-	picard.money = atoi(money);
+	picard.money = atoi(money); // NOLINT
 	free(money);
 	name[ref] = '\0';
 	picard.name = malloc(sizeof(char) * (strlen(name) + 1));
@@ -185,9 +234,9 @@ void connectPicard(int sock, Frame frame) {
 	debug("[SENDING FRAME]\n");
 	answer.type = CODE_CONNECT;
 	memset(answer.header, '\0', HEADER_SIZE * sizeof(char));
-	sprintf(answer.header,
-			"CONOK");            //TODO: Hi haurà algun cas que serà KO, possiblement si s'arriba a un màxim de connexions
-	answer.length = 0;                            //o algo així
+	//TODO: Hi haurà algun cas que serà KO, possiblement si s'arriba a un màxim de connexions o algo així
+	sprintf(answer.header, "CONOK");
+	answer.length = 0;
 	answer.data = malloc(sizeof(char));
 	answer.data[0] = '\0';
 
@@ -203,6 +252,13 @@ void connectPicard(int sock, Frame frame) {
 	free(picard.name);    //TODO: Eliminar free
 }
 
+/**
+ * Funció per a desconnectar un Picard de l'Enterprise. Rep la petició com a paràmetre i respon al Picard
+ * en qüestió segons si pot desconnectar-lo.
+ *
+ * @param sock 		Socket de la communicació
+ * @param frame 	Trama rebuda amb informació sobre el Picard.
+ */
 void disconnectPicard(int sock, Frame frame) {
 	Frame answer;
 	char *name;
@@ -212,12 +268,12 @@ void disconnectPicard(int sock, Frame frame) {
 	memset(name, '\0', sizeof(char) * (strlen(frame.data) + 1));
 	strcpy(name, frame.data);
 
-	//frame = getEnterpriseConnection();
+
 	debug("[SENDING FRAME]\n");
 	answer.type = CODE_DISCONNECT;
 	memset(answer.header, '\0', HEADER_SIZE * sizeof(char));
-	sprintf(answer.header, "CONOK");					//TODO: Hi haurà algun cas que serà KO, possiblement si s'arriba a un màxim de connexions
-	answer.length = 0;									//o algo així
+	sprintf(answer.header, "CONOK");		//TODO: Hi haurà algun cas que serà KO
+	answer.length = 0;
 	answer.data = malloc(sizeof(char));
 	answer.data[0] = '\0';
 
@@ -233,7 +289,9 @@ void disconnectPicard(int sock, Frame frame) {
 	free(frame.data);
 }
 
-
+/**
+ * Funció per alliberar els recursos del programa.
+ */
 void freeResources() {
 	int i = 0;
 
@@ -254,6 +312,9 @@ void freeResources() {
 
 }
 
+/**
+ * Funció per a capturar el signal SIGINT i alliberar els recursos abans d'aturar l'execució.
+ */
 void controlSigint() {
 	freeResources();
 	exit(EXIT_SUCCESS);
