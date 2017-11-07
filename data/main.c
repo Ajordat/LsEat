@@ -11,7 +11,7 @@ int main(void) {
 
 	sock_picard = createSocket(config.ip, config.port_picard);
 	if (sock_picard < 0) {
-		sprintf(aux, "Error al obrir el port pels Picards.\n");
+		sprintf(aux, MSG_PORT_PIC_ERR);
 		print(aux);
 		freeResources();
 		exit(EXIT_FAILURE);
@@ -19,7 +19,7 @@ int main(void) {
 
 	sock_enterprise = createSocket(config.ip, config.port_enterprise);
 	if (sock_enterprise < 0) {
-		sprintf(aux, "Error al obrir el port pels Picards.\n");
+		sprintf(aux, MSG_PORT_ENT_ERR);
 		print(aux);
 		freeResources();
 		exit(EXIT_FAILURE);
@@ -28,10 +28,10 @@ int main(void) {
 
 	signal(SIGINT, controlSigint);
 
-	print("Executant Data...\n");
-	listenSocket(sock_picard);
+	print(MSG_EXECUTING);
+	listenSocket(sock_picard);			//TODO: En un thread
 
-//    listenSocket(sock_enterprise);
+//    listenSocket(sock_enterprise);	//TODO: En un thread
 
 	return EXIT_SUCCESS;
 }

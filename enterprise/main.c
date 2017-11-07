@@ -3,6 +3,7 @@
 
 #include "logica.h"
 
+
 int main(int argc, char **argv) {
 	char aux[LENGTH];
 
@@ -10,12 +11,12 @@ int main(int argc, char **argv) {
 
 	readConfigFile(argv[1]);
 
-	sprintf(aux, "Benvingut al restaurant %s\n", config.name);
+	sprintf(aux, MSG_WELCOME, config.name);
 	print(aux);
 
 	readMenuFile(argv[2]);
 
-	print("Carregat Menu!\n");
+	print(MSG_LOADED_MENU);
 
 	sock_picard = createSocket(config.ip_picard, config.port_picard);
 

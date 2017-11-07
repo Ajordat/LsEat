@@ -14,7 +14,7 @@ int createSocket(char *ip, int port) {
 
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock <= 0) {
-		sprintf(aux, "Error a l'establir connexió. 1\n");
+		sprintf(aux, MSG_CONEX_ERR);
 		write(1, aux, strlen(aux));
 		return -1;
 	}
@@ -24,8 +24,10 @@ int createSocket(char *ip, int port) {
 	addr.sin_addr.s_addr = inet_addr(ip);
 
 	if (bind(sock, (void *) &addr, sizeof(addr)) < 0) {
-		sprintf(aux, "Error a l'establir connexió. 2\n%s\n", strerror(errno));
-		write(1, aux, strlen(aux));
+		sprintf(aux, MSG_CONEX_ERR);
+		print(aux);
+		sprintf(aux, "%s\n", strerror(errno));
+		print(aux);
 		return -1;
 	}
 
@@ -106,24 +108,24 @@ Frame readFrame(int sock) {
 
 /**
  * Funció per crear un Frame a utilitzant les dades dels paràmetres.
- * Actualment en desús perquè al aconseguir que funcioni ara, no m'atreveixo a tocar res d'aquest tema.
  *
  * @param type 		Camp type de la trama
  * @param header 	Camp header de la trama
  * @param data 		Camp data de la trama
  * @return 			Frame creat
  */
-Frame createFrame(char type, char * header, char * data){
+Frame createFrame(char type, char *header, char *data) {
 	Frame frame;
 	frame.type = type;
 	memset(frame.header, '\0', HEADER_SIZE * sizeof(char));
 	strcpy(frame.header, header);
 
-	if (data == NULL){
+	if (data == NULL) {
 		frame.length = 0;
-		frame.data = NULL;
+		frame.data = malloc(sizeof(char));
+		memset(frame.data, '\0', sizeof(char));
 	} else {
-		frame.data = malloc(sizeof(char) * strlen(data));
+		frame.data = malloc(sizeof(char) * (strlen(data) + 1));
 		strcpy(frame.data, data);
 		frame.length = (short) strlen(frame.data);
 	}

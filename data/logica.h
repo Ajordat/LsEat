@@ -13,6 +13,13 @@
 #define FILE_CONFIG		"configData.dat"
 #define CONNECT_STATUS 	1
 
+#define	MSG_WAITING			"Esperant clients...\n"
+#define MSG_FILE_ERR		"Error a l'obrir el fitxer %s.\n"
+#define	MSG_CONNECT_PIC		"Connectant %s\n"
+#define	MSG_DISCONNECT_PIC	"Desconnectant %s\n"
+#define	MSG_PORT_PIC_ERR	"Error al obrir el port pels Picards.\n"
+#define	MSG_PORT_ENT_ERR	"Error al obrir el port pels Enterprise.\n"
+#define	MSG_EXECUTING		"Executant Data...\n"
 
 typedef struct {
     char *ip;

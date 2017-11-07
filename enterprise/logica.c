@@ -30,7 +30,7 @@ void readConfigFile(char *filename) {
 
 	file = open(filename, O_RDONLY);
 	if (file <= 0) {
-		sprintf(msg, "Error a l'obrir el fitxer %s.\n", filename);
+		sprintf(msg, MSG_FILE_ERR, filename);
 		print(msg);
 		exit(EXIT_FAILURE);
 	}
@@ -73,7 +73,7 @@ void readMenuFile(char *filename) {
 
 	file = open(filename, O_RDONLY);
 	if (file <= 0) {
-		sprintf(msg, "Error a l'obrir el fitxer %s.\n", filename);
+		sprintf(msg, MSG_FILE_ERR, filename);
 		print(msg);
 
 		free(config.name);
@@ -128,10 +128,10 @@ void readMenuFile(char *filename) {
 void listenSocket(int sock) {
 	struct sockaddr_in addr;
 	socklen_t addr_len;
-	int *new_sock;
+	int *new_sock, aux_sock;
 	pthread_t id;
 
-	print("Esperant clients...\n");
+	print(MSG_WAITING);
 
 	listen(sock, MAX_REQUESTS);
 
@@ -139,18 +139,20 @@ void listenSocket(int sock) {
 
 	while (1) {
 
-		new_sock = malloc(sizeof(int));
-
 		debug("[WAITING]\n");
-		if ((*new_sock = accept(sock, (void *) &addr, &addr_len)) < 0) {
-			print("Error a l'establir connexió. 3\n");
+		if ((aux_sock = accept(sock, (void *) &addr, &addr_len)) < 0) {
+			print(MSG_CONEX_ERR);
 			freeResources();
 			exit(EXIT_FAILURE);
 		}
+
 		//TODO: Arreglar (i canviar documentació)
 		//Funciona bé, però si rep un SIGINT mentre hi ha un thread obert és una cagada, es queda la
 		//informació del thread sense alliberar. S'ha de trobar una manera millor.
-		//Acabo de descobrir que del normal també queden 4bytes sueltos por ahí, s'ha de demanar ajuda
+
+		new_sock = malloc(sizeof(int));
+		*new_sock = aux_sock;
+
 		pthread_create(&id, NULL, attendPetition, new_sock);
 		pthread_detach(id);
 	}
@@ -167,18 +169,18 @@ void listenSocket(int sock) {
 void *attendPetition(void *sock_aux) {
 	Frame frame;
 	int sock = *((int *) sock_aux);
+
 	free(sock_aux);
 
 	do {
 		frame = readFrame(sock);
+		debugFrame(frame);
 		switch (frame.type) {
 			case CODE_CONNECT:
-				debugFrame(frame);
 				connectPicard(sock, frame);
 				break;
 
 			case CODE_DISCONNECT:
-				debugFrame(frame);
 				disconnectPicard(sock, frame);
 				break;
 
@@ -201,7 +203,6 @@ void *attendPetition(void *sock_aux) {
  */
 void connectPicard(int sock, Frame frame) {
 	Picard picard;        //TODO: Això serà un element d'alguna estructura (llista segurament)
-	Frame answer;
 	char *name, *money;
 	int ref, i;
 	char aux[LENGTH];
@@ -229,25 +230,19 @@ void connectPicard(int sock, Frame frame) {
 	strcpy(picard.name, name);
 	debug("[DONE]\n");
 
+	free(frame.data);
 
-	//frame = getEnterpriseConnection();
-	debug("[SENDING FRAME]\n");
-	answer.type = CODE_CONNECT;
-	memset(answer.header, '\0', HEADER_SIZE * sizeof(char));
 	//TODO: Hi haurà algun cas que serà KO, possiblement si s'arriba a un màxim de connexions o algo així
-	sprintf(answer.header, "CONOK");
-	answer.length = 0;
-	answer.data = malloc(sizeof(char));
-	answer.data[0] = '\0';
+	frame = createFrame(CODE_CONNECT, HEADER_PIC_ENT_CONN_OK, NULL);
+	debug("[SENDING FRAME]\n");
 
-	sendFrame(sock, answer);
-	debugFrame(answer);
+	sendFrame(sock, frame);
+	debugFrame(frame);
 	debug("[SENT]\n");
 
-	sprintf(aux, "Connectant %s\n", picard.name);
+	sprintf(aux, MSG_CONN_PIC, picard.name);
 	print(aux);
 
-	free(answer.data);
 	free(frame.data);
 	free(picard.name);    //TODO: Eliminar free
 }
@@ -260,7 +255,6 @@ void connectPicard(int sock, Frame frame) {
  * @param frame 	Trama rebuda amb informació sobre el Picard.
  */
 void disconnectPicard(int sock, Frame frame) {
-	Frame answer;
 	char *name;
 	char aux[LENGTH];
 
@@ -268,24 +262,19 @@ void disconnectPicard(int sock, Frame frame) {
 	memset(name, '\0', sizeof(char) * (strlen(frame.data) + 1));
 	strcpy(name, frame.data);
 
+	free(frame.data);
 
 	debug("[SENDING FRAME]\n");
-	answer.type = CODE_DISCONNECT;
-	memset(answer.header, '\0', HEADER_SIZE * sizeof(char));
-	sprintf(answer.header, "CONOK");		//TODO: Hi haurà algun cas que serà KO
-	answer.length = 0;
-	answer.data = malloc(sizeof(char));
-	answer.data[0] = '\0';
+	frame = createFrame(CODE_DISCONNECT, HEADER_PIC_ENT_DISC_OK, NULL);	//TODO: Hi haurà algun cas que serà KO
 
-	sendFrame(sock, answer);
+	sendFrame(sock, frame);
 
-	debugFrame(answer);
+	debugFrame(frame);
 	debug("[SENT]\n");
 
-	sprintf(aux, "Desconnectant %s\n", name);
+	sprintf(aux, MSG_DISC_PIC, name);
 	print(aux);
 	free(name);
-	free(answer.data);
 	free(frame.data);
 }
 

@@ -11,7 +11,7 @@ void readConfigFile(char *filename) {
 
 	file = open(filename, O_RDONLY);
 	if (file <= 0) {
-		sprintf(msg, "Error a l'obrir el fitxer %s.\n", filename);
+		sprintf(msg, MSG_FILE_ERR, filename);
 		print(msg);
 		exit(EXIT_FAILURE);
 	}
@@ -44,7 +44,7 @@ void listenSocket(int sock) {
 	char aux[LENGTH];
 	int new_sock;
 
-	print("Esperant clients...\n");
+	print(MSG_WAITING);
 
 	listen(sock, MAX_REQUESTS);
 
@@ -53,7 +53,7 @@ void listenSocket(int sock) {
 	while (1) {
 
 		if ((new_sock = accept(sock, (void *) &addr, &addr_len)) < 0) {
-			sprintf(aux, "Error a l'establir connexió. 3\n");
+			sprintf(aux, MSG_CONEX_ERR);
 			write(1, aux, strlen(aux));
 			freeResources();
 			exit(EXIT_FAILURE);
@@ -106,10 +106,10 @@ void connectSocket(int sock, Frame frame) {
 	char *name;
 	char aux[LENGTH];
 
-	if (!strcmp(frame.header, "PIC_NAME")) {
+	if (!strcmp(frame.header, HEADER_PIC_DATA_CONNECT)) {
 		name = malloc(sizeof(char) * (strlen(frame.data) + 1));
 		strcpy(name, frame.data);
-		sprintf(aux, "Connectant %s\n", name);
+		sprintf(aux, MSG_CONNECT_PIC, name);
 		print(aux);
 		free(frame.data);
 
@@ -117,7 +117,7 @@ void connectSocket(int sock, Frame frame) {
 		debugFrame(frame);
 		sendFrame(sock, frame);
 
-		sprintf(aux, "Desconnectant %s\n", name);
+		sprintf(aux, MSG_DISCONNECT_PIC, name);
 		print(aux);
 
 		free(frame.data);
@@ -140,26 +140,10 @@ char getConnectionStatus() { return CONNECT_STATUS; }
  * @return 	Trama a respondre al client
  */
 Frame getEnterpriseConnection() {
-	Frame frame;
 
-	frame.type = CODE_CONNECT;
-
-	memset(frame.header, '\0', HEADER_SIZE);
-
-	if (getConnectionStatus()) {
-		sprintf(frame.header, "ENT_INF");
-		frame.data = malloc(sizeof("Enterprise A&127.0.0.1&8491"));
-		memset(frame.data, '\0', sizeof("Enterprise A&127.0.0.1&8491"));
-		sprintf(frame.data, "Enterprise A&127.0.0.1&8491");
-		frame.length = (short) strlen(frame.data);
-	} else {
-		sprintf(frame.header, "CONKO");
-		frame.length = 0;
-		frame.data = malloc(sizeof(char));
-		frame.data[0] = '\0';
-	}
-
-	return frame;
+	return getConnectionStatus() ?
+				createFrame(CODE_CONNECT, HEADER_DATA_PIC_CON_OK, HARDCODED_ENTERPRISE) :
+				createFrame(CODE_CONNECT, HEADER_DATA_PIC_CON_KO, NULL);
 }
 
 /**

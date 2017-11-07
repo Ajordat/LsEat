@@ -15,7 +15,7 @@ int createSocket(char *ip, int port) {
 
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock < 0) {
-		sprintf(aux, "Error a l'establir connexió. 1\n");
+		sprintf(aux, MSG_CONEX_ERR);
 		print(aux);
 		return -1;
 	}
@@ -25,7 +25,9 @@ int createSocket(char *ip, int port) {
 	addr.sin_addr.s_addr = inet_addr(ip);
 
 	if (bind(sock, (void *) &addr, sizeof(addr)) < 0) {
-		sprintf(aux, "Error a l'establir connexió. 2\n%s\n", strerror(errno));
+		sprintf(aux, MSG_CONEX_ERR);
+		print(aux);
+		sprintf(aux, "%s\n", strerror(errno));
 		print(aux);
 		return -1;
 	}
@@ -33,12 +35,13 @@ int createSocket(char *ip, int port) {
 }
 
 /**
- * Funció per mostrar el contingut d'una trama. Mostra l'output si DEBUG és diferent a 0.
+ * Funció per mostrar el contingut d'una trama. Només mostra l'output si DEBUG és diferent a 0.
  *
  * @param frame 	Trama a mostrar
  */
 void debugFrame(Frame frame) {
 	char aux[LENGTH];
+
 	sprintf(aux, "|%d|%s|%i|%s|\n", frame.type, frame.header, frame.length, frame.data);
 	debug(aux);
 }
@@ -103,3 +106,28 @@ Frame readFrame(int sock) {
 	return frame;
 }
 
+/**
+ * Funció per crear un Frame a utilitzant les dades dels paràmetres.
+ *
+ * @param type 		Camp type de la trama
+ * @param header 	Camp header de la trama
+ * @param data 		Camp data de la trama
+ * @return 			Frame creat
+ */
+Frame createFrame(char type, char *header, char *data) {
+	Frame frame;
+	frame.type = type;
+	memset(frame.header, '\0', HEADER_SIZE * sizeof(char));
+	strcpy(frame.header, header);
+
+	if (data == NULL) {
+		frame.length = 0;
+		frame.data = malloc(sizeof(char));
+		memset(frame.data, '\0', sizeof(char));
+	} else {
+		frame.data = malloc(sizeof(char) * (strlen(data) + 1));
+		strcpy(frame.data, data);
+		frame.length = (short) strlen(frame.data);
+	}
+	return frame;
+}

@@ -94,22 +94,22 @@ Command substractCommand(const char *command) {
 	}
 	word = getWord(&i, command);
 
-	if (!strcasecmp("CONNECTA", word)) {
+	if (!strcasecmp(CMD_CONNECT, word)) {
 
 		cmd.code = checkParameters(i, command, CODE_CONNECT);
 
-	} else if (!strcasecmp("MOSTRA", word)) {
+	} else if (!strcasecmp(CMD_SHOW, word)) {
 
 		free(word);
 		word = getWord(&i, command);
 
-		if (!strcasecmp("MENU", word)) {
+		if (!strcasecmp(CMD_MENU, word)) {
 			cmd.code = checkParameters(i, command, CODE_SHOWMENU);
 		} else {
 			cmd.code = ERR_UNK_CMD;
 		}
 
-	} else if (!strcasecmp("DEMANA", word)) {
+	} else if (!strcasecmp(CMD_REQUEST, word)) {
 
 		free(word);
 		word = getWord(&i, command);
@@ -126,7 +126,7 @@ Command substractCommand(const char *command) {
 			cmd.code = ERR_N_PARAMS;
 		}
 
-	} else if (!strcasecmp("ELIMINA", word)) {
+	} else if (!strcasecmp(CMD_REMOVE, word)) {
 
 		free(word);
 		word = getWord(&i, command);
@@ -143,11 +143,11 @@ Command substractCommand(const char *command) {
 			cmd.code = ERR_N_PARAMS;
 		}
 
-	} else if (!strcasecmp("PAGAR", word)) {
+	} else if (!strcasecmp(CMD_PAY, word)) {
 
 		cmd.code = checkParameters(i, command, CODE_PAY);
 
-	} else if (!strcasecmp("DESCONNECTA", word)) {
+	} else if (!strcasecmp(CMD_DISCONNECT, word)) {
 
 		cmd.code = checkParameters(i, command, CODE_DISCONNECT);
 
@@ -219,28 +219,27 @@ char tryConnectionEnterprise(Frame frame) {
 	close(sock);
 
 	debug("[STARTING ENTERPRISE CONNECTION]\n");
-	if (strcmp(frame.header, "ENT_INF")) { // NOLINT
-		print("[Connexió amb Data KO] -> (");
-		print(frame.header);
-		print(")\n");
+	if (strcmp(frame.header, HEADER_PIC_DATA_OK)) { // NOLINT
+		print(MSG_PIC_DATA_KO);
+		free(frame.data);
 		return -1;
 	}
-	print("[Connexió amb Data OK]\n");
+	print(MSG_PIC_DATA_OK);
 	socket = resolveEnterprise(frame);
 
 	if (getSocket(socket.ip, socket.port) < 0) {
 		debug("[FAILURE]\n");
-		print("[Connexió amb Enterprise KO]\n");
+		print(MSG_PIC_ENT_KO);
 		free(socket.ip);
 		free(frame.data);
 		return -1;
 	}
-	print("[Connexió amb Enterprise OK]\n");
+	print(MSG_PIC_ENT_OK);
 	debug("[DONE]\n");
 	free(socket.ip);
 	free(frame.data);
 	connectEnterprise(config.name, config.money);    //HARDCODED
-	print("Connexió realitzada!\n");
+	print(MSG_CONEX_OK);
 	return 0;
 }
 

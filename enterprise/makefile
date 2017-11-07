@@ -4,13 +4,15 @@ GRUP = 18
 FASE = 2
 CC = gcc
 CFLAGS = -Wall -Wextra -lpthread
-FILES = main.c logica.c utils.c network.c
-HEADERS = logica.h utils.h network.h
+MAIN = main.c
+MODULES = logica utils network
+FILES = $(patsubst %,%.c, $(MODULES))
+HEADERS = $(patsubst %,%.h, $(MODULES))
 TEMP_FILES =
 EXE = enterprise
 
-all: $(FILES) $(HEADERS)
-	$(CC) $(FILES) $(CFLAGS) -o $(EXE)
+all: $(MAIN) $(FILES) $(HEADERS)
+	$(CC) $(MAIN) $(FILES) $(CFLAGS) -o $(EXE)
 
 stop:
 	ps -u $(LOGIN1) | grep $(EXE) | awk '{print $$1}' | xargs kill 2> /dev/null
