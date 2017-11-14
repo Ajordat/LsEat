@@ -8,7 +8,7 @@
 
 #include "utils.h"
 #include "network.h"
-
+#include "shell.h"
 
 #define ERR_UNK_CMD     (char)  0xFF
 #define ERR_N_PARAMS    (char)  0XFE
@@ -38,11 +38,7 @@ typedef struct {
     int port;
 } Config;
 
-typedef struct {
-    char code;
-    int unitats;
-    char *plat;
-} Command;
+
 
 Config config;
 
@@ -52,6 +48,8 @@ char checkProgramArguments(int argc);
 void welcomeMessage();
 
 void readConfigFile(char *filename);
+
+char initConnection();
 
 void shell();
 

@@ -2,12 +2,8 @@
 #define _PICARD_NETWORK_H_
 
 
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <errno.h>
-
 #include "utils.h"
+#include "network_utils.h"
 
 
 #define CODE_CONNECT    (char)  0x01
@@ -17,15 +13,6 @@
 #define CODE_REMOVE     (char)  0x05
 #define CODE_PAY        (char)  0x06
 
-#define HEADER_SIZE		10
-
-
-typedef struct {
-	char type;
-	char header[10];
-	short length;
-	char *data;
-} Frame;
 
 typedef struct {
 	char *name;
@@ -41,7 +28,7 @@ typedef struct {
 
 int sock;
 
-Enterprise enterprise;
+Enterprise enterprise;		//No tinc clar que sigui gaire útil això
 
 
 char connectEnterprise(char *name, int money);
@@ -50,12 +37,9 @@ void disconnect(char *name);
 
 Frame establishConnection(char *name);
 
-char getSocket(char *ip, int port);
-
-void sendFrame(Frame);
+void writeFrame(Frame);
 
 Frame readFrame();
 
-void debugFrame(Frame);
 
 #endif

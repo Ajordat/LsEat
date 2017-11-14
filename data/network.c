@@ -122,6 +122,7 @@ Frame readFrame(int sock) {
  */
 Frame createFrame(char type, char *header, char *data) {
 	Frame frame;
+
 	frame.type = type;
 	memset(frame.header, '\0', HEADER_SIZE * sizeof(char));
 	strcpy(frame.header, header);

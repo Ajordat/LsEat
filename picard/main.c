@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include <signal.h>
 
-#include "logica.h"
+#include "shell.h"
+
 
 int main(int argc, char **argv) {
 	char aux[LENGTH];

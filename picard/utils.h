@@ -8,7 +8,7 @@
 #include <ctype.h>        //tolower
 
 #define LENGTH 100
-#define DEBUG 0
+#define DEBUG 1
 
 
 void debug(char *msg);

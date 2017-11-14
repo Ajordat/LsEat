@@ -1,21 +1,21 @@
-#include "network.h"
+#include "network_utils.h"
 
 /**
- * Funció per obtenir un socket de servidor a partir d'una direcció ip i un port.
+ * Funció per obtenir un socket de client a partir d'una direcció ip i un port.
  *
  * @param ip 	Direcció ip del socket
  * @param port 	Port del socket
- * @return 		File descriptor amb un socket per fer de servidor o -1 si no l'ha pogut obrir
+ * @return 		El socket creat. Si no s'ha pogut crear, -1
  */
-int createSocket(char *ip, int port) {
+int createClientSocket(char *ip, int port) {
 	char aux[LENGTH];
 	struct sockaddr_in addr;
-	int sock;
 
-	sock = socket(AF_INET, SOCK_STREAM, 0);
+	int sock = socket(AF_INET, SOCK_STREAM, 0);
+
 	if (sock <= 0) {
-		sprintf(aux, MSG_CONEX_ERR);
-		write(1, aux, strlen(aux));
+		sprintf(aux, "Error a l'establir connexió.\n%s\n", strerror(errno));
+		write(STDOUT_FILENO, aux, strlen(aux));
 		return -1;
 	}
 
@@ -23,37 +23,22 @@ int createSocket(char *ip, int port) {
 	addr.sin_port = htons((uint16_t) port);
 	addr.sin_addr.s_addr = inet_addr(ip);
 
-	if (bind(sock, (void *) &addr, sizeof(addr)) < 0) {
-		sprintf(aux, MSG_CONEX_ERR);
-		print(aux);
-		sprintf(aux, "%s\n", strerror(errno));
-		print(aux);
+	if (connect(sock, (void *) &addr, sizeof(addr)) < 0) {
+		sprintf(aux, "Error a l'establir connexió. 2\n%s\n", strerror(errno));
+		write(STDOUT_FILENO, aux, strlen(aux));
 		return -1;
 	}
 
-	sprintf(aux, "[Creating socket] -> %d\n", port);
-	debug(aux);
 	return sock;
-}
-
-/**
- * Funció per mostrar el contingut d'una trama. Només mostra l'output si DEBUG és diferent a 0.
- *
- * @param frame 	Trama a mostrar
- */
-void debugFrame(Frame frame) {
-	char aux[LENGTH];
-	sprintf(aux, "|%d|%s|%i|%s|\n", frame.type, frame.header, frame.length, frame.data);
-	debug(aux);
 }
 
 /**
  * Funció per enviar una trama.
  *
- * @param sock 		Socket de connexió amb el client.
+ * @param socket	Socket de connexió amb el client.
  * @param frame 	Trama a enviar
  */
-void sendFrame(int sock, Frame frame) {
+void sendFrame(int socket, Frame frame) {
 	char *trama;
 
 	//Petició de memòria per la trama a enviar. La seva mida és la suma de les mides dels diferents camps.
@@ -74,7 +59,7 @@ void sendFrame(int sock, Frame frame) {
 	memcpy(trama + sizeof(char) * (HEADER_SIZE + 3), frame.data, (strlen(frame.data) + 1) * sizeof(char));
 
 	//Enviament de la trama.
-	write(sock, trama, sizeof(char) * (1 + HEADER_SIZE + 2 + strlen(frame.data)));
+	write(socket, trama, sizeof(char) * (1 + HEADER_SIZE + 2 + strlen(frame.data)));
 	debug(trama);
 
 	//Alliberament de la trama enviada.
@@ -84,30 +69,30 @@ void sendFrame(int sock, Frame frame) {
 /**
  * Funció per rebre una trama.
  *
- * @param sock 	Socket de lectura de la trama
+ * @param socket 	Socket de lectura de la trama
  * @return 		Trama llegida
  */
-Frame readFrame(int sock) {
+Frame receiveFrame(int socket) {
 	Frame frame;
 	char length[2];
 
 	debug("readFrame()\n");
 
 	//Lectura del camp type. 1 byte.
-	read(sock, &frame.type, sizeof(char));
+	read(socket, &frame.type, sizeof(char));
 
 	//Lectura del camp header. 10 bytes.
-	read(sock, frame.header, HEADER_SIZE * sizeof(char));
+	read(socket, frame.header, HEADER_SIZE * sizeof(char));
 
 	//Lectura del camp length. 2 bytes. Es llegeix un array de dos caràcters i es volquen en una variable
 	//de tipus short per facilitar el tractament.
-	read(sock, length, 2 * sizeof(char));
+	read(socket, length, 2 * sizeof(char));
 	frame.length = (short) (((length[0] << 8) & 0xFF00) | (length[1] & 0x00FF));
 
 	//Lectura del camp data segons la llargada indicada al camp length. Mida variable.
 	frame.data = malloc(sizeof(char) * (frame.length + 1));
 	memset(frame.data, '\0', sizeof(char) * (frame.length + 1));
-	read(sock, frame.data, (size_t) frame.length);
+	read(socket, frame.data, (size_t) frame.length);
 	frame.data[frame.length] = '\0';
 
 	return frame;
@@ -138,4 +123,15 @@ Frame createFrame(char type, char *header, char *data) {
 		frame.length = (short) strlen(frame.data);
 	}
 	return frame;
+}
+
+/**
+ * Funció per mostrar el contingut d'una trama. Només mostra l'output si DEBUG és diferent a 0.
+ *
+ * @param frame 	Trama a mostrar
+ */
+void debugFrame(Frame frame) {
+	char aux[LENGTH];
+	sprintf(aux, "|%d|%s|%i|%s|\n", frame.type, frame.header, frame.length, frame.data);
+	debug(aux);
 }

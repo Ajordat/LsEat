@@ -87,9 +87,11 @@ char checkNumber(const char *word) {
 }
 
 /**
- * Funció per llegir caràcter a caràcter de un file descriptor i
- * @param fd
- * @return
+ * Funció per llegir caràcter a caràcter d'un file descriptor i a memòria dinàmica fins a trobar un salt de línia
+ * o un '\0'.
+ *
+ * @param fd	File descriptor
+ * @return		Punter a memòria dinàmica amb el text llegit
  */
 char *readFileDescriptor(int fd) {
 	char mychar = '\0';
@@ -110,6 +112,11 @@ char *readFileDescriptor(int fd) {
 	}
 }
 
+/**
+ * Funció per passar un número a ASCII.
+ * @param num 	Número a obtenir en ASCII
+ * @param buff 	Cadena amb el resultat
+ */
 void myItoa(int num, char *buff) {
 	int i, j;
 	char aux;

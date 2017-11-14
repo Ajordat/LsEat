@@ -4,7 +4,7 @@ GRUP = 18
 FASE = 3
 CFLAGS = -Wall -Wextra
 MAIN = main.c
-MODULES = logica utils network
+MODULES = logica utils network network_utils shell
 EXE = picard
 
 FILES = $(MAIN) $(patsubst %,%.c, $(MODULES))
