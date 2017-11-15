@@ -8,7 +8,7 @@
 #include <ctype.h>        //tolower
 
 #define LENGTH 100
-#define DEBUG 1
+#define DEBUG 0
 
 
 void debug(char *msg);
@@ -28,5 +28,9 @@ char checkNumber(const char *word);
 char * readFileDescriptor(int fd);
 
 void myItoa(int num, char *buff);
+
+void shiftLeft(char *string, int index);
+
+void shiftRight(char *string, int index);
 
 #endif

@@ -74,7 +74,6 @@ Socket resolveEnterprise(Frame frame) {
 	char *aux;
 	Socket socket;
 
-
 	for (j = 0; frame.data[j] != '&'; j++);
 	j++;
 
@@ -165,8 +164,6 @@ void freeResources() {
 	free(config.name);
 	free(config.ip);
 	freeHistory();
-	if (sock > 0)
-		close(sock);
 }
 
 /**
@@ -174,6 +171,10 @@ void freeResources() {
  */
 void controlSigint() {
 	debug("\nSIGINT REBUT");
+	if (sock > 0) {
+		disconnect(config.name);
+		close(sock);
+	}
 	freeResources();
 	exit(EXIT_SUCCESS);
 }

@@ -3,27 +3,37 @@
 
 
 #include <stdlib.h>
-//#include <termio.h>
+#include <termio.h>
+
 #include "logica.h"
 #include "utils.h"
+
+
+#define	KEY_ARROW1	27
+#define	KEY_ARROW2	'['
+#define	KEY_UP		'A'
+#define	KEY_DOWN	'B'
+#define	KEY_RIGHT	'C'
+#define	KEY_LEFT	'D'
+
 
 typedef struct {
 	char code;
 	int unitats;
 	char *plat;
 } Command;
- 
-//static struct termios old, new;
+
+
 char **history;
 int nLog;
 int indexLog;
-
+struct termios old;
 
 void initShell();
 
-void appendCommand(Command cmd);
+void appendCommand(Command);
 
-char solveCommand(const char *command);
+char solveCommand(char *command);
 
 void freeHistory();
 

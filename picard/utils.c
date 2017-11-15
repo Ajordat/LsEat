@@ -133,3 +133,26 @@ void myItoa(int num, char *buff) {
 	}
 }
 
+
+void shiftLeft(char *string, int index) {
+	char aux;
+	if (string[index] == '\0') return;
+	while (string[++index] != '\0') {
+		aux = string[index];
+		string[index] = string[index - 1];
+		string[index - 1] = aux;
+	}
+	string[index - 1] = '\0';
+}
+
+void shiftRight(char *string, int index) {
+	char aux;
+	int length = (int) strlen(string)+1;
+	if (string[index] == '\0') return;
+	while (length-- != index) {
+		aux = string[length];
+		string[length] = string[length + 1];
+		string[length + 1] = aux;
+	}
+	string[index] = ' ';
+}

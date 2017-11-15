@@ -4,12 +4,7 @@
 void initShell() {
 	nLog = 0;
 	indexLog = 0;
-	history = malloc(sizeof(char *));
-//	tcgetattr(0, &old); /* grab old terminal i/o settings */
-//	new = old; /* make new settings same as old settings */
-//	new.c_lflag &= ~ICANON; /* disable buffered i/o */
-//	new.c_lflag &= ECHO; /* set echo mode */
-//	tcsetattr(0, TCSANOW, &new); /* use these new terminal i/o settings now */
+	tcgetattr(STDIN_FILENO, &old);
 }
 
 /**
@@ -33,7 +28,7 @@ char checkParameters(int index, const char *command, char code) {
  * @param command 	Comanda introduïda per l'usuari al terminal del Picard
  * @return 			Tipus Command que conté el codi de la comanda a executar i informació extra (si la necessita)
  */
-Command substractCommand(const char *command) {
+Command substractCommand(char *command) {
 	int i = 0;
 	char *word;
 	Command cmd;
@@ -57,6 +52,9 @@ Command substractCommand(const char *command) {
 			cmd.code = checkParameters(i, command, CODE_SHOWMENU);
 		} else {
 			cmd.code = ERR_UNK_CMD;
+			cmd.plat = malloc((strlen(command)+1)* sizeof(char));
+			memcpy(cmd.plat, command, (strlen(command)+1)* sizeof(char));
+//			memset(cmd.plat, '\0', (strlen(command)+1)* sizeof(char));
 		}
 
 	} else if (!strcasecmp(CMD_REQUEST, word)) {
@@ -106,7 +104,7 @@ Command substractCommand(const char *command) {
 		cmd.code = checkParameters(i, command, CODE_DISCONNECT);
 
 	} else {
-
+		cmd.plat = command;
 		cmd.code = ERR_UNK_CMD;
 	}
 	free(word);
@@ -116,12 +114,13 @@ Command substractCommand(const char *command) {
 void appendCommand(Command cmd) {
 	char aux[10];
 
-	history = realloc(history, sizeof(char *) * (nLog + 1));
+	if (history[nLog] != NULL)
+		free(history[nLog]);
 
 	switch (cmd.code) {
 		case CODE_CONNECT:
-			history[nLog] = malloc((strlen(CMD_CONNECT) + 1) * sizeof(char));
-			memset(history[nLog], '\0', (strlen(CMD_CONNECT) + 1) * sizeof(char));
+			history[nLog] = malloc((strlen(CMD_CONNECT) + 2) * sizeof(char));
+			memset(history[nLog], '\0', (strlen(CMD_CONNECT) + 2) * sizeof(char));
 			sprintf(history[nLog], "%s", CMD_CONNECT);
 			break;
 		case CODE_SHOWMENU:
@@ -146,13 +145,43 @@ void appendCommand(Command cmd) {
 			memset(history[nLog], '\0', (strlen(CMD_PAY) + 1) * sizeof(char));
 			sprintf(history[nLog], "%s", CMD_PAY);
 			break;
+		case CODE_DISCONNECT:
+			history[nLog] = malloc((strlen(CMD_DISCONNECT) + 2) * sizeof(char));
+			memset(history[nLog], '\0', (strlen(CMD_DISCONNECT) + 2) * sizeof(char));
+			sprintf(history[nLog], "%s", CMD_DISCONNECT);
+			break;
 		default:
+			if (cmd.plat != NULL)
+				history[nLog] = cmd.plat;
 			break;
 	}
 	nLog++;
-	indexLog++;
 
 	printHistory();
+}
+
+char readChar() {
+	char mychar;
+	struct termios new;
+
+	new = old;
+	new.c_lflag &= ~(ICANON | ECHO);
+	new.c_lflag |= (ISIG);
+	tcsetattr(STDIN_FILENO, TCSANOW, &new);
+
+	read(STDIN_FILENO, &mychar, sizeof(char));
+
+	tcsetattr(STDIN_FILENO, TCSANOW, &old);
+	return mychar;
+}
+
+void printRemainingCommand(char *string, int index, int size) {
+	int i;
+	for (i = index; i <= size; i++)
+		write(STDOUT_FILENO, &string[i], sizeof(char));
+	write(STDOUT_FILENO, " ", sizeof(char));
+	for (; i > index; i--)
+		write(STDOUT_FILENO, "\b", sizeof(char));
 }
 
 /**
@@ -161,23 +190,96 @@ void appendCommand(Command cmd) {
  * @return 	Comanda introduïda per l'usuari
  */
 char *readCommand() {
-	char mychar = '\0';
-	int index = 0;
-	char *string;
+	char mychar;
+	int index = 0, size = 0;
 
-	string = NULL;
+	//TODO: Arreglar si ens introdueixen una comanda incorrecta, hi ha fugues de memòria en aquests casos
+	history = realloc(history, (nLog + 1) * sizeof(char *));
+	history[nLog] = NULL;
+	indexLog = nLog;
+
 	while (1) {
-		read(0, &mychar, sizeof(char));
+		mychar = readChar();
 		if (mychar == '\n' || mychar == '\0') {
-			if (string != NULL)
-				string[index] = '\0';
-			return string;
+			if (history[indexLog] != NULL) {
+				history[indexLog][size] = '\0';
+				for (; index < size; index++)
+					write(STDOUT_FILENO, &(history[indexLog][index]), sizeof(char));
+				write(STDOUT_FILENO, "\n", sizeof(char));
+			}
+			return history[indexLog];
 		}
-		string = realloc(string, sizeof(char) * (index + 2));
-		string[index] = mychar;
-		index++;
+		if (mychar == KEY_ARROW1) {
+			mychar = readChar();
+			if (mychar == KEY_ARROW2) {
+				mychar = readChar();
+				switch (mychar) {
+					case KEY_UP:
+						if (indexLog > 0) {
+							indexLog--;
+							for (; index < size; index++) write(STDOUT_FILENO, " ", sizeof(char));
+							for (; size; size--) write(STDOUT_FILENO, "\b \b", sizeof(char) * 3);
+							size = index = (int) strlen(history[indexLog]);
+							print(history[indexLog]);
+						}
+						break;
+					case KEY_DOWN:
+						if (indexLog < nLog) {
+							indexLog++;
+							for (; index < size; index++) write(STDOUT_FILENO, " ", sizeof(char));
+							for (; size; size--) write(STDOUT_FILENO, "\b \b", sizeof(char) * 3);
+							if (history[indexLog] != NULL) {
+								size = index = (int) strlen(history[indexLog]);
+								print(history[indexLog]);
+							} else
+								size = index = 0;
+						}
+						break;
+					case KEY_RIGHT:
+						if (index < size) {
+							write(STDOUT_FILENO, &(history[indexLog][index]), sizeof(char));
+							index++;
+						}
+						break;
+					case KEY_LEFT:
+						if (index > 0) {
+							index--;
+							write(STDOUT_FILENO, "\b", sizeof(char));
+						}
+						break;
+					default:
+						break;
+				}
+			}
+		} else if ((mychar &= 0xFF) == 0177) {
+			if (index > 0) {
+				size--;
+				index--;
+				if (index == size) {
+					write(STDOUT_FILENO, "\b \b", sizeof(char) * 3);
+				} else {
+					shiftLeft(history[indexLog], index);
+					write(STDOUT_FILENO, "\b", sizeof(char));
+					printRemainingCommand(history[indexLog], index, size);
+				}
+			}
+		} else {
+			write(STDOUT_FILENO, &mychar, sizeof(char));
+			history[indexLog] = realloc(history[indexLog], sizeof(char) * (size + 2));
+			index++;
+			size++;
+			if (index == size) {
+				history[indexLog][size - 1] = mychar;
+				history[indexLog][size] = '\0';
+			} else {
+				shiftRight(history[indexLog], index - 1);
+				history[indexLog][index - 1] = mychar;
+				printRemainingCommand(history[indexLog], index, size);
+			}
+		}
 	}
 }
+
 
 /**
  * Funció per executar la funcionalitat escollida per l'usuari segons la comanda introduïda.
@@ -185,13 +287,13 @@ char *readCommand() {
  * @param command 	Comanda introduïda per l'usuari
  * @return 			Un flag indicant si s'ha de tancar l'execució del Picard
  */
-char solveCommand(const char *command) {
+char solveCommand(char *command) {
 	Command cmd = substractCommand(command);
 	static char connected = 0;
 
-	if (cmd.code >= 0 && cmd.code != CODE_DISCONNECT) {
+	if (command != NULL)
 		appendCommand(cmd);
-	}
+
 	switch (cmd.code) {
 		case CODE_CONNECT:
 			debug("Toca connectar\n");
@@ -231,6 +333,7 @@ char solveCommand(const char *command) {
 			debug("Toca desconnectar\n");
 			if (connected) {
 				disconnect(config.name);
+				close(sock);
 			} else {
 				print("Encara no t'havies connectat!\n");
 			}
@@ -238,7 +341,11 @@ char solveCommand(const char *command) {
 			return 1;
 
 		case ERR_UNK_CMD:
-			print("Comanda no reconeguda\n");
+			print("Comanda no reconeguda");
+			char aux[LENGTH];
+			sprintf(aux, " -> [%s]", command);
+			debug(aux);
+			print("\n");
 			break;
 
 		case ERR_N_PARAMS:
@@ -268,7 +375,7 @@ void shell() {
 
 		flag = solveCommand(command);
 
-		free(command);
+//		free(command);
 	} while (!flag);
 }
 
@@ -288,5 +395,5 @@ void freeHistory() {
 		free(history[i]);
 	}
 	free(history);
-//	tcsetattr(0, TCSANOW, &old);
+	tcsetattr(STDIN_FILENO, TCSANOW, &old);
 }

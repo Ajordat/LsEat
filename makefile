@@ -2,18 +2,16 @@ LOGIN1 = ls30687
 LOGIN2 = ls31285
 GRUP = 18
 FASE = 3
-CFLAGS = -Wall -Wextra -lpthread
-MAIN = main.c
-MODULS = logica utils network
-FILES := $(MAIN) $(patsubst %,%.c,$(MODULS))
-HEADERS := $(patsubst %,%.h,$(MODULS))
 EXE = enterprise data picard
 
 
 all: $(patsubst %,%.build,$(EXE))
 
 %.build:
-	gcc $(patsubst %,$*/%,$(FILES)) $(CFLAGS) -o $*/$*
+	$(eval MAIN := $(shell sed -n 's/MAIN = //p' $*/makefile))
+	$(eval MODULES := $(shell sed -n 's/MODULES = //p' $*/makefile))
+	$(eval CFLAGS := $(shell sed -n 's/CFLAGS = //p' $*/makefile))
+	gcc $*/$(MAIN) $(patsubst %,$*/%.c,$(MODULES)) $(CFLAGS) -o $*/$*
 
 clean: $(patsubst %,%.rm,$(EXE))
 	rm -f G$(GRUP)_F$(FASE)_$(LOGIN1)_$(LOGIN2).tar

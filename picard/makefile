@@ -14,7 +14,8 @@ all: $(FILES) $(HEADERS)
 	gcc $(FILES) $(CFLAGS) -o $(EXE)
 
 stop:
-	ps -u $(LOGIN1) | grep $(EXE) | awk '{print $$1}' | xargs kill 2> /dev/null
+	@ps -u $(LOGIN1) | grep -e $(EXE) -e memcheck-amd64- | awk '{print $$1}' | xargs kill 2> /dev/null
+	@echo "Service stopped."
 
 again: clean all
 
