@@ -8,6 +8,7 @@
 
 #include "utils.h"
 #include "network.h"
+#include "MinHeap.h"
 
 
 #define FILE_CONFIG		"configData.dat"
@@ -21,31 +22,26 @@
 #define	MSG_PORT_ENT_ERR	"Error al obrir el port pels Enterprise.\n"
 #define	MSG_EXECUTING		"Executant Data...\n"
 
+
 typedef struct {
     char *ip;
     int port_picard;
     int port_enterprise;
 } Config;
 
-typedef struct {
-    char *name;
-    char *ip;
-    int port;
-    int users;
-} Enterprise;		//S'utilitzarà per saber els enterprise dels que es disposa.
-
 
 Config config;
 
 int sock_picard;
 int sock_enterprise;
+MinHeap minheap;
 
 
 void readConfigFile(char *filename);
 
 void attendPetition(int sock);
 
-void listenSocket(int sock);
+void listenServerSockets();
 
 void connectSocket(int sock, Frame frame);
 

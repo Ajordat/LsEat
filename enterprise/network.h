@@ -23,7 +23,6 @@
 #define CODE_PAY		(char)	0x06
 #define CODE_UPDATE		(char)	0x07
 
-
 #define	HEADER_PIC_ENT_CONN_OK	"CONOK"
 #define	HEADER_PIC_ENT_DISC_OK	"CONOK"
 
@@ -33,6 +32,7 @@
 #define MAX_REQUESTS	128
 #define HEADER_SIZE		10
 
+
 typedef struct {
 	char type;
 	char header[10];
@@ -41,7 +41,9 @@ typedef struct {
 } Frame;
 
 
-int createSocket(char *ip, int port);
+int createClientSocket(char *ip, int port);
+
+int createServerSocket(char *ip, int port);
 
 void debugFrame(Frame frame);
 
@@ -50,5 +52,6 @@ void sendFrame(int sock, Frame frame);
 Frame readFrame(int sock);
 
 Frame createFrame(char type, char *header, char *data);
+
 
 #endif

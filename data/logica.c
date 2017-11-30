@@ -38,6 +38,46 @@ void readConfigFile(char *filename) {
  *
  * @param sock 	Socket a escoltar
  */
+void listenServerSockets() {
+	struct sockaddr_in addr;
+	socklen_t addr_len;
+	int new_sock;
+	fd_set read_fds;
+
+	print(MSG_WAITING);
+
+	listen(sock_enterprise, MAX_REQUESTS);
+	listen(sock_picard, MAX_REQUESTS);
+
+	addr_len = sizeof(addr);
+
+	while (1) {
+		FD_ZERO(&read_fds);
+		FD_SET(sock_enterprise, &read_fds);
+		FD_SET(sock_picard, &read_fds);
+
+		if (select(FD_SETSIZE, &read_fds, NULL, NULL, NULL) > 0) {
+
+			new_sock = accept(
+					FD_ISSET(sock_enterprise, &read_fds) ?
+						sock_enterprise : sock_picard,
+					(void *) &addr,
+					&addr_len);
+
+			if (new_sock < 0) {
+				print(MSG_CONEX_ERR);
+				freeResources();
+				exit(EXIT_FAILURE);
+			}
+
+			attendPetition(new_sock);
+			close(new_sock);
+		} else return;
+
+	}
+}
+
+/*
 void listenSocket(int sock) {
 	struct sockaddr_in addr;
 	socklen_t addr_len;
@@ -53,19 +93,16 @@ void listenSocket(int sock) {
 	while (1) {
 
 		if ((new_sock = accept(sock, (void *) &addr, &addr_len)) < 0) {
-			sprintf(aux, MSG_CONEX_ERR);
-			write(1, aux, strlen(aux));
+			print(MSG_CONEX_ERR);
 			freeResources();
 			exit(EXIT_FAILURE);
 		}
 
 		attendPetition(new_sock);
-
 		close(new_sock);
-
 	}
-
 }
+ */
 
 /**
  * Funció per executar les peticions dels clients a partir del camp type de la trama.
@@ -73,7 +110,7 @@ void listenSocket(int sock) {
  *
  * @param sock 	Socket de la connexió amb el client
  */
-void attendPetition(int sock) {
+void attendPetition(int sock) {        //TODO: Gestionar connexió Enterprise
 	Frame frame;
 
 	frame = readFrame(sock);
@@ -124,6 +161,15 @@ void connectSocket(int sock, Frame frame) {
 		free(name);
 	} else {
 		//TODO: Tractar petició Enterprise
+		//Inserir a la PQ
+		print("PETICIÓ D'ENTERPRISE!\n");
+		print(frame.data);
+		print("\n");
+
+		free(frame.data);
+		frame = createFrame(CODE_CONNECT, "CONOK", NULL);
+		sendFrame(sock, frame);
+		free(frame.data);
 	}
 }
 
@@ -141,9 +187,12 @@ char getConnectionStatus() { return CONNECT_STATUS; }
  */
 Frame getEnterpriseConnection() {
 
+	//TODO: Obtenir Enterprise de la PQ
+	//Actualitzar-li el valor i inserir-lo
+
 	return getConnectionStatus() ?
-				createFrame(CODE_CONNECT, HEADER_DATA_PIC_CON_OK, HARDCODED_ENTERPRISE) :
-				createFrame(CODE_CONNECT, HEADER_DATA_PIC_CON_KO, NULL);
+		   createFrame(CODE_CONNECT, HEADER_DATA_PIC_CON_OK, HARDCODED_ENTERPRISE) :
+		   createFrame(CODE_CONNECT, HEADER_DATA_PIC_CON_KO, NULL);
 }
 
 /**

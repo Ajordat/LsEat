@@ -1,5 +1,30 @@
 #include "logica.h"
 
+
+char connectData() {
+	Frame frame;
+	char aux[LENGTH];
+
+	sock_data = createClientSocket(config.ip_data, config.port_data);
+
+	if (sock_data < 0)
+		return 0;
+
+	memset(aux, '\0', LENGTH);
+	sprintf(aux, "%s&%d&%s", config.name, config.port_picard, config.ip_picard);
+	frame = createFrame(CODE_CONNECT, "ENT_INF", aux);
+
+	sendFrame(sock_data, frame);
+	free(frame.data);
+
+	frame = readFrame(sock_data);
+	free(frame.data);
+
+	close(sock_data);	//TODO: Pensar si treure
+
+	return !strcmp(frame.header, "CONOK");
+}
+
 /**
  * Funció per comprovar que el nombre d'arguments sigui correcte.
  *
@@ -121,7 +146,6 @@ void readMenuFile(char *filename) {
 
 /**
  * Funció d'escolta del socket. Bloqueja l'execució esperant que un client es connecti al seu port.
- * Hem intentat que sigui dedicat, però és complicat perquè hi ha un int que no acabem d'alliberar.
  *
  * @param sock 	Socket a escoltar
  */
@@ -227,7 +251,7 @@ void connectPicard(int sock, Frame frame) {
 	name[ref] = '\0';
 	picard.name = malloc(sizeof(char) * (strlen(name) + 1));
 	memset(picard.name, '\0', sizeof(char) * (strlen(name) + 1));
-	strcpy(picard.name, name);
+	strcpy(picard.name, name);    //TODO: Inserir a una llista de sockets
 	debug("[DONE]\n");
 
 	free(frame.data);
@@ -265,7 +289,7 @@ void disconnectPicard(int sock, Frame frame) {
 	free(frame.data);
 
 	debug("[SENDING FRAME]\n");
-	frame = createFrame(CODE_DISCONNECT, HEADER_PIC_ENT_DISC_OK, NULL);	//TODO: Hi haurà algun cas que serà KO
+	frame = createFrame(CODE_DISCONNECT, HEADER_PIC_ENT_DISC_OK, NULL);    //TODO: Hi haurà algun cas que serà KO
 
 	sendFrame(sock, frame);
 
@@ -283,6 +307,8 @@ void disconnectPicard(int sock, Frame frame) {
  */
 void freeResources() {
 	int i = 0;
+
+	//TODO: Avisar a Data de la desconnexió de l'Enterprise
 
 	free(config.name);
 	free(config.ip_picard);

@@ -1,6 +1,7 @@
 #ifndef _ENTERPRISE_LOGICA_H_
 #define _ENTERPRISE_LOGICA_H_
 
+
 #include <stdio.h>
 #include <sys/fcntl.h>
 #include <stdlib.h>
@@ -17,6 +18,7 @@
 #define MSG_CONEX_ERR		"Error a l'establir connexió.\n"
 #define	MSG_CONN_PIC		"Connectant %s\n"
 #define	MSG_DISC_PIC		"Desconnectant %s\n"
+
 
 typedef struct {
 	char *name;
@@ -43,10 +45,14 @@ typedef struct {
 	int money;
 } Picard;
 
+
 Config config;
 Menu menu;
 int sock_data;
 int sock_picard;
+
+
+char connectData();
 
 char checkProgramArguments(int argc);
 
@@ -65,5 +71,6 @@ void disconnectPicard(int sock, Frame frame);
 void freeResources();
 
 void controlSigint();
+
 
 #endif

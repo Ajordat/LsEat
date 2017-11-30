@@ -29,9 +29,8 @@ int main(void) {
 	signal(SIGINT, controlSigint);
 
 	print(MSG_EXECUTING);
-	listenSocket(sock_picard);			//TODO: En un thread
 
-//    listenSocket(sock_enterprise);	//TODO: En un thread
+	listenServerSockets();	//Both picard and enterprise
 
 	return EXIT_SUCCESS;
 }

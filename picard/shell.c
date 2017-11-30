@@ -52,9 +52,8 @@ Command substractCommand(char *command) {
 			cmd.code = checkParameters(i, command, CODE_SHOWMENU);
 		} else {
 			cmd.code = ERR_UNK_CMD;
-			cmd.plat = malloc((strlen(command)+1)* sizeof(char));
-			memcpy(cmd.plat, command, (strlen(command)+1)* sizeof(char));
-//			memset(cmd.plat, '\0', (strlen(command)+1)* sizeof(char));
+			cmd.plat = malloc((strlen(command) + 1) * sizeof(char));
+			memcpy(cmd.plat, command, (strlen(command) + 1) * sizeof(char));
 		}
 
 	} else if (!strcasecmp(CMD_REQUEST, word)) {
@@ -375,7 +374,6 @@ void shell() {
 
 		flag = solveCommand(command);
 
-//		free(command);
 	} while (!flag);
 }
 
