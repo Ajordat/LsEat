@@ -25,6 +25,7 @@ int main(void) {
 		exit(EXIT_FAILURE);
 	}
 
+	minheap = HEAP_init();
 
 	signal(SIGINT, controlSigint);
 

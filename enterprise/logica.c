@@ -11,7 +11,7 @@ char connectData() {
 		return 0;
 
 	memset(aux, '\0', LENGTH);
-	sprintf(aux, "%s&%d&%s", config.name, config.port_picard, config.ip_picard);
+	sprintf(aux, "%s&%s&%d", config.name, config.ip_picard, config.port_picard);
 	frame = createFrame(CODE_CONNECT, "ENT_INF", aux);
 
 	sendFrame(sock_data, frame);
@@ -20,7 +20,7 @@ char connectData() {
 	frame = readFrame(sock_data);
 	free(frame.data);
 
-	close(sock_data);	//TODO: Pensar si treure
+	close(sock_data);
 
 	return !strcmp(frame.header, "CONOK");
 }
@@ -144,6 +144,45 @@ void readMenuFile(char *filename) {
 	}
 }
 
+//TODO thread de update
+void *updateInformation() {
+	char aux[LENGTH];
+	Frame frame;
+
+	while(1){
+		sleep((uint) config.refresh);
+		debug("[UPDATE]\n");
+		sock_data = createClientSocket(config.ip_data, config.port_data);
+
+		if (sock_data < 0)
+			return NULL;
+
+		memset(aux, '\0', LENGTH);
+		sprintf(aux, "%d&%d", config.port_picard, nUsers);
+		frame = createFrame(CODE_UPDATE, "UPDATE", aux);
+
+		debugFrame(frame);
+		sendFrame(sock_data, frame);
+		free(frame.data);
+
+		frame = readFrame(sock_data);
+		debugFrame(frame);
+		free(frame.data);
+
+		close(sock_data);
+	}
+	return NULL;
+}
+
+void updateThread() {
+
+//	fiUpdate = 0;
+	pthread_create(&update, NULL,  updateInformation, NULL);
+//	pthread_detach(update);
+
+}
+
+
 /**
  * Funció d'escolta del socket. Bloqueja l'execució esperant que un client es connecti al seu port.
  *
@@ -161,6 +200,9 @@ void listenSocket(int sock) {
 
 	addr_len = sizeof(addr);
 
+	mutUsers = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+	nUsers = 0;
+
 	while (1) {
 
 		debug("[WAITING]\n");
@@ -172,7 +214,7 @@ void listenSocket(int sock) {
 
 		//TODO: Arreglar (i canviar documentació)
 		//Funciona bé, però si rep un SIGINT mentre hi ha un thread obert és una cagada, es queda la
-		//informació del thread sense alliberar. S'ha de trobar una manera millor.
+		//memòria dinàmica del thread sense alliberar. S'ha de trobar una manera millor.
 
 		new_sock = malloc(sizeof(int));
 		*new_sock = aux_sock;
@@ -258,6 +300,10 @@ void connectPicard(int sock, Frame frame) {
 
 	//TODO: Hi haurà algun cas que serà KO, possiblement si s'arriba a un màxim de connexions o algo així
 	frame = createFrame(CODE_CONNECT, HEADER_PIC_ENT_CONN_OK, NULL);
+	pthread_mutex_lock(&mutUsers);
+	nUsers++;
+	pthread_mutex_unlock(&mutUsers);
+
 	debug("[SENDING FRAME]\n");
 
 	sendFrame(sock, frame);
@@ -290,7 +336,9 @@ void disconnectPicard(int sock, Frame frame) {
 
 	debug("[SENDING FRAME]\n");
 	frame = createFrame(CODE_DISCONNECT, HEADER_PIC_ENT_DISC_OK, NULL);    //TODO: Hi haurà algun cas que serà KO
-
+	pthread_mutex_lock(&mutUsers);
+	nUsers--;
+	pthread_mutex_unlock(&mutUsers);
 	sendFrame(sock, frame);
 
 	debugFrame(frame);
@@ -302,6 +350,28 @@ void disconnectPicard(int sock, Frame frame) {
 	free(frame.data);
 }
 
+void disconnectFromData(){
+	char aux[LENGTH];
+	Frame frame;
+
+	sock_data = createClientSocket(config.ip_data, config.port_data);
+
+	if (sock_data < 0)
+		return;
+
+	memset(aux, '\0', LENGTH);
+	sprintf(aux, "%d", config.port_picard);
+	frame = createFrame(CODE_DISCONNECT, "ENT_INF", aux);
+
+	debugFrame(frame);
+	sendFrame(sock_data, frame);
+	free(frame.data);
+
+	frame = readFrame(sock_data);
+	debugFrame(frame);
+	free(frame.data);
+}
+
 /**
  * Funció per alliberar els recursos del programa.
  */
@@ -309,6 +379,14 @@ void freeResources() {
 	int i = 0;
 
 	//TODO: Avisar a Data de la desconnexió de l'Enterprise
+
+
+//	fiUpdate = 1;
+	pthread_cancel(update);
+//	pthread_join(update, NULL);
+	pthread_mutex_destroy(&mutUsers);
+
+	disconnectFromData();
 
 	free(config.name);
 	free(config.ip_picard);

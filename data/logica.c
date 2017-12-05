@@ -60,7 +60,7 @@ void listenServerSockets() {
 
 			new_sock = accept(
 					FD_ISSET(sock_enterprise, &read_fds) ?
-						sock_enterprise : sock_picard,
+					sock_enterprise : sock_picard,
 					(void *) &addr,
 					&addr_len);
 
@@ -72,37 +72,44 @@ void listenServerSockets() {
 
 			attendPetition(new_sock);
 			close(new_sock);
+			HEAP_print(minheap);
 		} else return;
 
 	}
 }
 
-/*
-void listenSocket(int sock) {
-	struct sockaddr_in addr;
-	socklen_t addr_len;
+char updateEnterprise(const char *data) {
+	int i, j;
+	int port;
+	int users;
 	char aux[LENGTH];
-	int new_sock;
 
-	print(MSG_WAITING);
-
-	listen(sock, MAX_REQUESTS);
-
-	addr_len = sizeof(addr);
-
-	while (1) {
-
-		if ((new_sock = accept(sock, (void *) &addr, &addr_len)) < 0) {
-			print(MSG_CONEX_ERR);
-			freeResources();
-			exit(EXIT_FAILURE);
-		}
-
-		attendPetition(new_sock);
-		close(new_sock);
+	for (i = 0; data[i] != '&'; i++) {
+		aux[i] = data[i];
 	}
+	aux[i] = '\0';
+	port = atoi(aux); // NOLINT
+
+	for (j = 0, i++; data[i]; i++, j++) {
+		aux[j] = data[i];
+	}
+	aux[j] = '\0';
+	users = atoi(aux); // NOLINT
+
+	return HEAP_update(&minheap, port, users);
 }
- */
+
+char disconnectEnterprise(const char *data) {
+	int i;
+	char aux[LENGTH];
+
+	for (i = 0; data[i]; i++) {
+		aux[i] = data[i];
+	}
+	aux[i] = '\0';
+
+	return HEAP_disconnect(&minheap, atoi(aux));  // NOLINT
+}
 
 /**
  * Funció per executar les peticions dels clients a partir del camp type de la trama.
@@ -112,6 +119,7 @@ void listenSocket(int sock) {
  */
 void attendPetition(int sock) {        //TODO: Gestionar connexió Enterprise
 	Frame frame;
+	char answer = 0;
 
 	frame = readFrame(sock);
 	debugFrame(frame);
@@ -121,16 +129,64 @@ void attendPetition(int sock) {        //TODO: Gestionar connexió Enterprise
 			connectSocket(sock, frame);
 			break;
 
-		case CODE_DISCONNECT:
+		case CODE_UPDATE:
+			answer = updateEnterprise(frame.data);
+			free(frame.data);
+			frame = createFrame(CODE_UPDATE, answer ? "UPDATEOK" : "UPDATEKO", NULL);
+			sendFrame(sock, frame);
+			free(frame.data);
 			break;
 
-		case CODE_UPDATE:
+		case CODE_DISCONNECT:
+			answer = disconnectEnterprise(frame.data);
+			free(frame.data);
+			frame = createFrame(CODE_DISCONNECT, answer ? "CONOK" : "CONKO", NULL);
+			sendFrame(sock, frame);
+			free(frame.data);
 			break;
 
 		default:
 			break;
 
 	}
+}
+
+Enterprise parseEnterprise(const char *data) {
+	int i, j;
+	char *aux;
+	Enterprise ent;
+
+	ent.name = malloc(sizeof(char));
+	for (i = 0, j = 0; data[j] != '&'; j++) {
+		ent.name[i] = data[j];
+		i++;
+		ent.name = realloc(ent.name, sizeof(char) * (i + 1));
+	}
+	ent.name[i] = '\0';
+	j++;
+
+	ent.ip = malloc(sizeof(char));
+	for (i = 0; data[j] != '&'; j++) {
+		ent.ip[i] = data[j];
+		i++;
+		ent.ip = realloc(ent.ip, sizeof(char) * (i + 1));
+	}
+	ent.ip[i] = '\0';
+	j++; //saltem &
+
+	aux = malloc(sizeof(char));
+	for (i = 0; data[j]; j++) {
+		aux[i] = data[j];
+		i++;
+		aux = realloc(aux, sizeof(char) * (i + 1));
+	}
+	aux[i] = '\0';
+	ent.port = atoi(aux); // NOLINT
+	free(aux);
+
+	ent.users = 0;
+
+	return ent;
 }
 
 /**
@@ -142,6 +198,7 @@ void attendPetition(int sock) {        //TODO: Gestionar connexió Enterprise
 void connectSocket(int sock, Frame frame) {
 	char *name;
 	char aux[LENGTH];
+	Enterprise ent;
 
 	if (!strcmp(frame.header, HEADER_PIC_DATA_CONNECT)) {
 		name = malloc(sizeof(char) * (strlen(frame.data) + 1));
@@ -160,11 +217,12 @@ void connectSocket(int sock, Frame frame) {
 		free(frame.data);
 		free(name);
 	} else {
-		//TODO: Tractar petició Enterprise
-		//Inserir a la PQ
 		print("PETICIÓ D'ENTERPRISE!\n");
 		print(frame.data);
 		print("\n");
+
+		ent = parseEnterprise(frame.data);
+		HEAP_push(&minheap, ent);
 
 		free(frame.data);
 		frame = createFrame(CODE_CONNECT, "CONOK", NULL);
@@ -174,25 +232,29 @@ void connectSocket(int sock, Frame frame) {
 }
 
 /**
- * Funció temporal per simular el resultat de si el Picard es pot connectar o no.
- *
- * @return 	L'estat resultant de la connexió
- */
-char getConnectionStatus() { return CONNECT_STATUS; }
-
-/**
  * Genera la trama de resposta al client amb la direcció ip i port d'un Enterprise, si tot ha anat bé.
  *
  * @return 	Trama a respondre al client
  */
 Frame getEnterpriseConnection() {
+	Enterprise ent;
+	char aux[LENGTH];
 
 	//TODO: Obtenir Enterprise de la PQ
 	//Actualitzar-li el valor i inserir-lo
+	if (!HEAP_length(minheap)) {
+		return createFrame(CODE_CONNECT, HEADER_DATA_PIC_CON_KO, NULL);
+	}
 
-	return getConnectionStatus() ?
-		   createFrame(CODE_CONNECT, HEADER_DATA_PIC_CON_OK, HARDCODED_ENTERPRISE) :
-		   createFrame(CODE_CONNECT, HEADER_DATA_PIC_CON_KO, NULL);
+	ent = HEAP_pop(&minheap);
+
+	ent.users++;
+
+	HEAP_push(&minheap, ent);
+	memset(aux, '\0', LENGTH);
+	sprintf(aux, "%s&%s&%d", ent.name, ent.ip, ent.port);
+
+	return createFrame(CODE_CONNECT, HEADER_DATA_PIC_CON_OK, aux);
 }
 
 /**
@@ -212,5 +274,6 @@ void freeResources() {
  */
 void controlSigint() {
 	freeResources();
+	HEAP_close(&minheap);
 	exit(EXIT_SUCCESS);
 }

@@ -25,7 +25,6 @@
 
 #define MSG_CONEX_ERR	"Error a l'establir connexió.\n"
 
-#define LENGTH			100
 #define MAX_REQUESTS	128
 #define HEADER_SIZE		10
 

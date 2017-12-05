@@ -38,8 +38,9 @@ int main(int argc, char **argv) {
 	}
 
 	//TODO: Crear thread d'UPDATE i que aquest vagi enviant els updates a Data
-
 	signal(SIGINT, controlSigint);
+
+	updateThread();
 
 	listenSocket(sock_picard);
 

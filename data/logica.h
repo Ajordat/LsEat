@@ -11,8 +11,7 @@
 #include "MinHeap.h"
 
 
-#define FILE_CONFIG		"configData.dat"
-#define CONNECT_STATUS 	1
+#define FILE_CONFIG			"configData.dat"
 
 #define	MSG_WAITING			"Esperant clients...\n"
 #define MSG_FILE_ERR		"Error a l'obrir el fitxer %s.\n"

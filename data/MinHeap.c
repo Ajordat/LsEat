@@ -11,11 +11,23 @@ MinHeap HEAP_init() {
 	return heap;
 }
 
+int HEAP_length(MinHeap heap) {
+	return heap.length;
+}
+
 void HEAP_print(MinHeap heap) {
 	int j;
+	char aux[LENGTH];
+
 	if (!heap.length) return;
-	for (j = 0; j < heap.length - 1; j++) printf("%d - ", heap.nodes[j].value);
-	printf("%d\n", heap.nodes[j].value);
+	for (j = 0; j < heap.length - 1; j++) {
+		sprintf(aux, "[%s-%s-%d-%d]-", heap.nodes[j].e.name, heap.nodes[j].e.ip, heap.nodes[j].e.port,
+				heap.nodes[j].e.users);
+		print(aux);
+	}
+	sprintf(aux, "[%s-%s-%d-%d]\n", heap.nodes[j].e.name, heap.nodes[j].e.ip, heap.nodes[j].e.port,
+			heap.nodes[j].e.users);
+	print(aux);
 }
 
 void pushDown(MinHeap *heap, int pos) {
@@ -90,6 +102,40 @@ char HEAP_remove(MinHeap *heap, int index) {
 	return 1;
 }
 
+char HEAP_update(MinHeap *heap, int port, int users) {
+	int i = 0;
+	Enterprise e;
+
+	for (; heap->length; i++) {
+		if (heap->nodes[i].e.port == port) {
+			e = heap->nodes[i].e;
+			HEAP_remove(heap, i);
+			e.users = users;
+			HEAP_push(heap, e);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+char HEAP_disconnect(MinHeap *heap, int port) {
+	int i = 0;
+
+	for (; heap->length; i++) {
+		if (heap->nodes[i].e.port == port) {
+			HEAP_remove(heap, i);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 void HEAP_close(MinHeap *heap) {
+	int i = 0;
+
+	for (; i < heap->length; i++) {
+		free(heap->nodes[i].e.ip);
+		free(heap->nodes[i].e.name);
+	}
 	free(heap->nodes);
 }

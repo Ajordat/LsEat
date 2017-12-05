@@ -50,6 +50,10 @@ Config config;
 Menu menu;
 int sock_data;
 int sock_picard;
+//int fiUpdate;
+pthread_t update;
+pthread_mutex_t mutUsers;
+int nUsers;
 
 
 char connectData();
@@ -71,6 +75,8 @@ void disconnectPicard(int sock, Frame frame);
 void freeResources();
 
 void controlSigint();
+
+void updateThread();
 
 
 #endif

@@ -3,7 +3,7 @@
 
 
 #include <stdio.h>
-
+#include "utils.h"
 
 typedef struct {
 	char *name;
@@ -27,6 +27,8 @@ MinHeap HEAP_init();
 
 void HEAP_print(MinHeap);
 
+int HEAP_length(MinHeap heap);
+
 Enterprise HEAP_pop(MinHeap *);
 
 void HEAP_push(MinHeap *, Enterprise);
@@ -34,6 +36,10 @@ void HEAP_push(MinHeap *, Enterprise);
 char HEAP_remove(MinHeap *, int index);
 
 void HEAP_close(MinHeap *);
+
+char HEAP_update(MinHeap *heap, int port, int users);
+
+char HEAP_disconnect(MinHeap *heap, int port);
 
 
 #endif
