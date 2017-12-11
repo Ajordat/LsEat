@@ -9,6 +9,7 @@
 char checkProgramArguments(int argc) {
 	char aux[LENGTH];
 
+
 	if (argc != 2) {
 		sprintf(aux, "El format de la crida és incorrecte, ha de ser:\n\tpicard <config_file.dat>\n");
 		print(aux);

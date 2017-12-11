@@ -10,6 +10,7 @@
 
 
 #define HEADER_SIZE		10
+#define FRAME_NULL		-1
 
 
 typedef struct {
@@ -22,7 +23,7 @@ typedef struct {
 
 int createClientSocket(char *ip, int port);
 
-void sendFrame(int socket, Frame);
+char sendFrame(int socket, Frame);
 
 Frame receiveFrame(int socket);
 

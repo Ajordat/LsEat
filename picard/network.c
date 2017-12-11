@@ -65,17 +65,23 @@ Frame establishConnection(char *name) {
  *
  * @param name 	Nom del Picard
  */
-void disconnect(char *name) {
+char disconnect(char *name) {
 	Frame frame;
+	char resp;
 
 	frame = createFrame(CODE_DISCONNECT, "PIC_NAME", name);
 	debugFrame(frame);
 
-	writeFrame(frame);
+	resp = writeFrame(frame);
 
 	free(frame.data);
+	if (!resp)
+		return 0;
 
 	frame = readFrame();
+	if (frame.type == FRAME_NULL) {
+		return 0;
+	}
 
 	debugFrame(frame);
 	free(frame.data);
@@ -84,6 +90,7 @@ void disconnect(char *name) {
 		print("[Desconnecta Enterprise OK]\n");
 	else
 		print("[Desconnecta Enterprise KO]\n");
+	return 1;
 }
 
 /**
@@ -91,8 +98,8 @@ void disconnect(char *name) {
  *
  * @param frame 	Trama a enviar
  */
-void writeFrame(Frame frame) {
-	sendFrame(sock, frame);
+char writeFrame(Frame frame) {
+	return sendFrame(sock, frame);
 }
 
 /**

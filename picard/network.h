@@ -33,11 +33,11 @@ Enterprise enterprise;		//No tinc clar que sigui gaire útil això
 
 char connectEnterprise(char *name, int money);
 
-void disconnect(char *name);
+char disconnect(char *name);
 
 Frame establishConnection(char *name);
 
-void writeFrame(Frame);
+char writeFrame(Frame);
 
 Frame readFrame();
 

@@ -47,7 +47,7 @@ char *getWord(int *index, const char *string) {
 		if (string[*index] == ' ' || string[*index] == '\t')
 			break;
 		i++;
-		word = realloc(word, sizeof(char) * (i + 1));
+		word = realloc(word, (size_t) i + 1);
 	}
 
 	word[i] = '\0';
@@ -106,7 +106,7 @@ char *readFileDescriptor(int fd) {
 				string[fd ? index - 1 : index] = '\0';
 			return string;
 		}
-		string = realloc(string, sizeof(char) * (index + 2));
+		string = realloc(string, (size_t) index + 2);
 		string[index] = mychar;
 		index++;
 	}
@@ -134,25 +134,22 @@ void myItoa(int num, char *buff) {
 }
 
 
-void shiftLeft(char *string, int index) {
-	char aux;
+void shiftLeft(char *string, int index, int size) {
 	if (string[index] == '\0') return;
-	while (string[++index] != '\0') {
-		aux = string[index];
-		string[index] = string[index - 1];
-		string[index - 1] = aux;
-	}
-	string[index - 1] = '\0';
+	memmove(string + index, string + index + 1, (size_t) size + 1);
 }
 
 void shiftRight(char *string, int index) {
-	char aux;
-	int length = (int) strlen(string)+1;
+//	char aux;
+//	int length = (int) strlen(string) + 1;
+	int length = index;
 	if (string[index] == '\0') return;
-	while (length-- != index) {
-		aux = string[length];
-		string[length] = string[length + 1];
-		string[length + 1] = aux;
-	}
+	while (string[length++]);
+	memmove(string + index + 1, string + index, (size_t) length - index - 1);
+//	while (length-- != index) {
+//		aux = string[length];
+//		string[length] = string[length + 1];
+//		string[length + 1] = aux;
+//	}
 	string[index] = ' ';
 }

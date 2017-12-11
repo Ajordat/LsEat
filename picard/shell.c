@@ -34,6 +34,7 @@ Command substractCommand(char *command) {
 	Command cmd;
 
 	if (command == NULL) {
+		cmd.plat = NULL;
 		cmd.code = ERR_UNK_CMD;
 		return cmd;
 	}
@@ -52,8 +53,8 @@ Command substractCommand(char *command) {
 			cmd.code = checkParameters(i, command, CODE_SHOWMENU);
 		} else {
 			cmd.code = ERR_UNK_CMD;
-			cmd.plat = malloc((strlen(command) + 1) * sizeof(char));
-			memcpy(cmd.plat, command, (strlen(command) + 1) * sizeof(char));
+			cmd.plat = malloc((size_t) strlen(command) + 1);
+			memcpy(cmd.plat, command, (size_t) strlen(command) + 1);
 		}
 
 	} else if (!strcasecmp(CMD_REQUEST, word)) {
@@ -103,7 +104,8 @@ Command substractCommand(char *command) {
 		cmd.code = checkParameters(i, command, CODE_DISCONNECT);
 
 	} else {
-		cmd.plat = command;
+		cmd.plat = malloc(strlen(command) + 1);
+		memcpy(cmd.plat, command, strlen(command) + 1);
 		cmd.code = ERR_UNK_CMD;
 	}
 	free(word);
@@ -112,46 +114,55 @@ Command substractCommand(char *command) {
 
 void appendCommand(Command cmd) {
 	char aux[10];
+	size_t length;
 
 	if (history[nLog] != NULL)
 		free(history[nLog]);
 
 	switch (cmd.code) {
 		case CODE_CONNECT:
-			history[nLog] = malloc((strlen(CMD_CONNECT) + 2) * sizeof(char));
-			memset(history[nLog], '\0', (strlen(CMD_CONNECT) + 2) * sizeof(char));
-			sprintf(history[nLog], "%s", CMD_CONNECT);
+			length = strlen(CMD_CONNECT) + 2;
+			history[nLog] = malloc(length);
+			memcpy(history[nLog], CMD_CONNECT, length);
 			break;
 		case CODE_SHOWMENU:
-			history[nLog] = malloc((strlen(CMD_SHOW) + 1 + strlen(CMD_MENU) + 1) * sizeof(char));
-			memset(history[nLog], '\0', (strlen(CMD_SHOW) + 1 + strlen(CMD_MENU) + 1) * sizeof(char));
-			sprintf(history[nLog], "%s %s", CMD_SHOW, CMD_MENU);
+			length = strlen(CMD_SHOW) + 1 + strlen(CMD_MENU) + 1;
+			history[nLog] = malloc(length);
+			memcpy(history[nLog], CMD_SHOW, length);
 			break;
 		case CODE_REQUEST:
 			myItoa(cmd.unitats, aux);
-			history[nLog] = malloc((strlen(CMD_REQUEST) + 1 + strlen(aux) + 1 + strlen(cmd.plat) + 1) * sizeof(char));
-			memset(history[nLog], '\0', (strlen(CMD_REQUEST) + strlen(aux) + strlen(cmd.plat) + 1) * sizeof(char));
+			length = strlen(CMD_REQUEST) + 1 + strlen(aux) + 1 + strlen(cmd.plat) + 1;
+			history[nLog] = malloc(length);
+			memset(history[nLog], '\0', length);    //Aquest length era length-1
 			sprintf(history[nLog], "%s %d %s", CMD_REQUEST, cmd.unitats, cmd.plat);
 			break;
 		case CODE_REMOVE:
 			myItoa(cmd.unitats, aux);
-			history[nLog] = malloc((strlen(CMD_REMOVE) + 1 + strlen(aux) + 1 + strlen(cmd.plat) + 1) * sizeof(char));
-			memset(history[nLog], '\0', (strlen(CMD_REMOVE) + strlen(aux) + strlen(cmd.plat) + 1) * sizeof(char));
+			length = strlen(CMD_REMOVE) + 1 + strlen(aux) + 1 + strlen(cmd.plat) + 1;
+			history[nLog] = malloc(length);
+			memset(history[nLog], '\0', length);    //Aquest length era length-2
 			sprintf(history[nLog], "%s %d %s", CMD_REMOVE, cmd.unitats, cmd.plat);
 			break;
 		case CODE_PAY:
-			history[nLog] = malloc((strlen(CMD_PAY) + 1) * sizeof(char));
-			memset(history[nLog], '\0', (strlen(CMD_PAY) + 1) * sizeof(char));
-			sprintf(history[nLog], "%s", CMD_PAY);
+			length = strlen(CMD_PAY) + 1;
+			history[nLog] = malloc(length);
+			memcpy(history[nLog], CMD_PAY, length);
 			break;
 		case CODE_DISCONNECT:
-			history[nLog] = malloc((strlen(CMD_DISCONNECT) + 2) * sizeof(char));
-			memset(history[nLog], '\0', (strlen(CMD_DISCONNECT) + 2) * sizeof(char));
-			sprintf(history[nLog], "%s", CMD_DISCONNECT);
+			length = strlen(CMD_DISCONNECT) + 2;
+			history[nLog] = malloc(length);
+			memcpy(history[nLog], CMD_DISCONNECT, length);
 			break;
 		default:
-			if (cmd.plat != NULL)
-				history[nLog] = cmd.plat;
+			if (cmd.plat != NULL) {
+				debug("Plat -> ");
+				debug(cmd.plat);
+				debug("\n");
+				length = strlen(cmd.plat) + 1;
+				history[nLog] = malloc(length);
+				memcpy(history[nLog], cmd.plat, length);
+			}
 			break;
 	}
 	nLog++;
@@ -217,7 +228,7 @@ char *readCommand() {
 						if (indexLog > 0) {
 							indexLog--;
 							for (; index < size; index++) write(STDOUT_FILENO, " ", sizeof(char));
-							for (; size; size--) write(STDOUT_FILENO, "\b \b", sizeof(char) * 3);
+							for (; size; size--) write(STDOUT_FILENO, "\b \b", (size_t) 3);
 							size = index = (int) strlen(history[indexLog]);
 							print(history[indexLog]);
 						}
@@ -226,7 +237,7 @@ char *readCommand() {
 						if (indexLog < nLog) {
 							indexLog++;
 							for (; index < size; index++) write(STDOUT_FILENO, " ", sizeof(char));
-							for (; size; size--) write(STDOUT_FILENO, "\b \b", sizeof(char) * 3);
+							for (; size; size--) write(STDOUT_FILENO, "\b \b", (size_t) 3);
 							if (history[indexLog] != NULL) {
 								size = index = (int) strlen(history[indexLog]);
 								print(history[indexLog]);
@@ -250,21 +261,24 @@ char *readCommand() {
 						break;
 				}
 			}
-		} else if ((mychar &= 0xFF) == 0177) {
+		} else if ((mychar &= 0xFF) == 0177) {	//delete char
 			if (index > 0) {
 				size--;
 				index--;
 				if (index == size) {
-					write(STDOUT_FILENO, "\b \b", sizeof(char) * 3);
+					history[indexLog] = realloc(history[indexLog], (size_t) size + 1);
+					history[indexLog][size] = '\0';
+					write(STDOUT_FILENO, "\b \b", (size_t) 3);
 				} else {
-					shiftLeft(history[indexLog], index);
+					shiftLeft(history[indexLog], index, size - index);
+					history[indexLog] = realloc(history[indexLog], (size_t) size + 1);
 					write(STDOUT_FILENO, "\b", sizeof(char));
 					printRemainingCommand(history[indexLog], index, size);
 				}
 			}
-		} else {
+		} else {    //insert char
 			write(STDOUT_FILENO, &mychar, sizeof(char));
-			history[indexLog] = realloc(history[indexLog], sizeof(char) * (size + 2));
+			history[indexLog] = realloc(history[indexLog], (size_t) size + 2);
 			index++;
 			size++;
 			if (index == size) {
@@ -289,6 +303,8 @@ char *readCommand() {
 char solveCommand(char *command) {
 	Command cmd = substractCommand(command);
 	static char connected = 0;
+	char aux[LENGTH];
+	char resp;
 
 	if (command != NULL)
 		appendCommand(cmd);
@@ -331,8 +347,12 @@ char solveCommand(char *command) {
 			 * */
 			debug("Toca desconnectar\n");
 			if (connected) {
-				disconnect(config.name);
-				close(sock);
+				resp = disconnect(config.name);
+				if (resp){
+					close(sock);
+				} else {
+					print("S'ha perdut la connexió amb el servidor!\n");
+				}
 			} else {
 				print("Encara no t'havies connectat!\n");
 			}
@@ -341,10 +361,10 @@ char solveCommand(char *command) {
 
 		case ERR_UNK_CMD:
 			print("Comanda no reconeguda");
-			char aux[LENGTH];
 			sprintf(aux, " -> [%s]", command);
 			debug(aux);
 			print("\n");
+			free(cmd.plat);
 			break;
 
 		case ERR_N_PARAMS:
@@ -389,6 +409,7 @@ void printHistory() {
 
 void freeHistory() {
 	int i = 0;
+
 	for (; i < nLog; i++) {
 		free(history[i]);
 	}
