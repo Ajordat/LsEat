@@ -160,7 +160,7 @@ Enterprise parseEnterprise(const char *data) {
 	for (i = 0, j = 0; data[j] != '&'; j++) {
 		ent.name[i] = data[j];
 		i++;
-		ent.name = realloc(ent.name, sizeof(char) * (i + 1));
+		ent.name = realloc(ent.name, (size_t) i + 1);
 	}
 	ent.name[i] = '\0';
 	j++;
@@ -169,7 +169,7 @@ Enterprise parseEnterprise(const char *data) {
 	for (i = 0; data[j] != '&'; j++) {
 		ent.ip[i] = data[j];
 		i++;
-		ent.ip = realloc(ent.ip, sizeof(char) * (i + 1));
+		ent.ip = realloc(ent.ip, (size_t) i + 1);
 	}
 	ent.ip[i] = '\0';
 	j++; //saltem &
@@ -178,7 +178,7 @@ Enterprise parseEnterprise(const char *data) {
 	for (i = 0; data[j]; j++) {
 		aux[i] = data[j];
 		i++;
-		aux = realloc(aux, sizeof(char) * (i + 1));
+		aux = realloc(aux, (size_t) i + 1);
 	}
 	aux[i] = '\0';
 	ent.port = atoi(aux); // NOLINT
@@ -265,8 +265,7 @@ void freeResources() {
 		close(sock_picard);
 	if (sock_enterprise > 0)
 		close(sock_enterprise);
-	if (config.ip != NULL)
-		free(config.ip);
+	free(config.ip);
 }
 
 /**

@@ -27,14 +27,14 @@ char connectEnterprise(char *name, int money) {
 	writeFrame(frame);
 
 	debug("[SENT]\n");
-	free(frame.data);
+	destroyFrame(&frame);
 	free(data);
 
 	debug("[READING FRAME]\n");
 	frame = readFrame();
 	debugFrame(frame);
 
-	free(frame.data);
+	destroyFrame(&frame);
 
 	return (char) strcmp(frame.header, "CONOK");
 }
@@ -53,7 +53,7 @@ Frame establishConnection(char *name) {
 
 	writeFrame(frame);
 
-	free(frame.data);
+	destroyFrame(&frame);
 
 	frame = readFrame();
 
@@ -74,7 +74,8 @@ char disconnect(char *name) {
 
 	resp = writeFrame(frame);
 
-	free(frame.data);
+	destroyFrame(&frame);
+
 	if (!resp)
 		return 0;
 
@@ -84,7 +85,7 @@ char disconnect(char *name) {
 	}
 
 	debugFrame(frame);
-	free(frame.data);
+	destroyFrame(&frame);
 
 	if (!strcmp(frame.header, "CONOK"))
 		print("[Desconnecta Enterprise OK]\n");

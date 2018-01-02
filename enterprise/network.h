@@ -45,13 +45,15 @@ int createClientSocket(char *ip, int port);
 
 int createServerSocket(char *ip, int port);
 
-void debugFrame(Frame frame);
+void debugFrame(Frame);
 
-void sendFrame(int sock, Frame frame);
+void sendFrame(int sock, Frame);
 
 Frame readFrame(int sock);
 
 Frame createFrame(char type, char *header, char *data);
+
+void destroyFrame(Frame *);
 
 
 #endif

@@ -119,7 +119,7 @@ Frame createFrame(char type, char *header, char *data) {
 	Frame frame;
 
 	frame.type = type;
-	memset(frame.header, '\0', HEADER_SIZE * sizeof(char));
+	memset(frame.header, '\0', HEADER_SIZE);
 	strcpy(frame.header, header);
 
 	if (data == NULL) {
@@ -127,11 +127,21 @@ Frame createFrame(char type, char *header, char *data) {
 		frame.data = malloc(sizeof(char));
 		memset(frame.data, '\0', sizeof(char));
 	} else {
-		frame.data = malloc(sizeof(char) * (strlen(data) + 1));
+		frame.data = malloc((size_t) strlen(data) + 1);
 		strcpy(frame.data, data);
 		frame.length = (short) strlen(frame.data);
 	}
 	return frame;
+}
+
+/**
+ * Funció per a eliminar el contingut d'una trama. D'aquesta manera, quan s'acaba d'utilitzar un frame es pot
+ * destruir i reutilitzar alliberant tota la memòria que requereix.
+ *
+ * @param frame 	Trama a destruir
+ */
+void destroyFrame(Frame *frame) {
+	free((*frame).data);
 }
 
 /**

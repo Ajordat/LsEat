@@ -26,7 +26,7 @@ void welcomeMessage() {
 
 	sprintf(aux, "Benvingut %s\n", config.name);
 	print(aux);
-	sprintf(aux, "Tens %d euros disponibles\n", config.money);
+	sprintf(aux, "Tens %d%s disponibles\n", config.money, MONEDA);
 	print(aux);
 	sprintf(aux, "Introdueix comandes...\n");
 	print(aux);
@@ -82,7 +82,7 @@ Socket resolveEnterprise(Frame frame) {
 	for (i = 0; frame.data[j] != '&'; j++) {
 		socket.ip[i] = frame.data[j];
 		i++;
-		socket.ip = realloc(socket.ip, sizeof(char) * (i + 1));
+		socket.ip = realloc(socket.ip, (size_t) i + 1);
 	}
 	socket.ip[i] = '\0';
 	j++; //saltem &
@@ -91,7 +91,7 @@ Socket resolveEnterprise(Frame frame) {
 	for (i = 0; frame.data[j]; j++) {
 		aux[i] = frame.data[j];
 		i++;
-		aux = realloc(aux, sizeof(char) * (i + 1));
+		aux = realloc(aux, (size_t) i + 1);
 	}
 	aux[i] = '\0';
 	socket.port = atoi(aux); // NOLINT
@@ -114,8 +114,8 @@ char tryConnectionEnterprise(Frame frame) {
 
 	debug("[STARTING ENTERPRISE CONNECTION]\n");
 	if (strcmp(frame.header, HEADER_PIC_DATA_OK)) { // NOLINT
-		print(MSG_PIC_DATA_KO);
-		free(frame.data);
+		print(MSG_PIC_ENT_KO);
+		destroyFrame(&frame);
 		return -1;
 	}
 	print(MSG_PIC_DATA_OK);
@@ -126,13 +126,13 @@ char tryConnectionEnterprise(Frame frame) {
 		debug("[FAILURE]\n");
 		print(MSG_PIC_ENT_KO);
 		free(socket.ip);
-		free(frame.data);
+		destroyFrame(&frame);
 		return -1;
 	}
 	print(MSG_PIC_ENT_OK);
 	debug("[DONE]\n");
 	free(socket.ip);
-	free(frame.data);
+	destroyFrame(&frame);
 	connectEnterprise(config.name, config.money);    //HARDCODED
 	print(MSG_CONEX_OK);
 	return 0;
@@ -150,11 +150,98 @@ char initConnection() {
 	print("Connectant amb LsEat...\n");
 	sock = createClientSocket(config.ip, config.port);
 	if (sock < 0) {
-		print("[No s'ha pogut connectar amb Data]\n");
+		print(MSG_PIC_DATA_KO);
 		return 0;
 	}
 	frame = establishConnection(config.name);
 	return (tryConnectionEnterprise(frame) >= 0);
+}
+
+Dish parseDish(const char *string) {
+	Dish dish;
+	char aux[LENGTH];
+	int i, j;
+
+	dish.name = malloc(sizeof(char));
+	for (i = 0; string[i] != '&'; i++) {
+		dish.name[i] = string[i];
+		dish.name = realloc(dish.name, (size_t) i + 2);
+	}
+	dish.name[i] = '\0';
+
+	memset(aux, '\0', LENGTH);
+	for (j = 0, i++; string[i] != '&'; i++, j++) {
+		aux[j] = string[i];
+	}
+	dish.price = atoi(aux);    // NOLINT
+
+	memset(aux, '\0', LENGTH);
+	for (j = 0, i++; string[i]; i++, j++) {
+		aux[j] = string[i];
+	}
+	dish.stock = atoi(aux);    // NOLINT
+
+	return dish;
+}
+
+void requestMenu() {
+	Frame frame;
+	Dish dish;
+	char aux[LENGTH];
+
+	frame = createFrame(CODE_SHOWMENU, HEADER_MENU_REQ, NULL);
+	writeFrame(frame);
+
+	while (1) {
+		destroyFrame(&frame);
+		frame = readFrame();    //TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
+
+		if (!strcmp(frame.header, HEADER_MENU_END)) break;
+
+		dish = parseDish(frame.data);
+
+		if (dish.stock > 0) {
+			sprintf(aux, "%s (x%d) --- %d%s\n", dish.name, dish.stock, dish.price, MONEDA);
+			print(aux);
+		}
+		free(dish.name);
+	}
+	destroyFrame(&frame);
+}
+
+void requestDish(Command cmd) {
+	Frame frame;
+	char aux[LENGTH];
+	char buffer[INT_LENGTH];
+
+	memset(aux, '\0', LENGTH);
+	memcpy(aux, cmd.plat, strlen(cmd.plat));
+
+	strcat(aux, "&");
+
+	memset(buffer, '\0', INT_LENGTH);
+	myItoa(cmd.unitats, buffer);
+	strcat(aux, buffer);
+
+	frame = createFrame(CODE_REQUEST, HEADER_REQ_DISH, aux);
+	writeFrame(frame);
+	destroyFrame(&frame);
+
+	frame = readFrame();	//TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
+
+	if (!strcasecmp(frame.header, HEADER_REQ_DISH_OK)) {
+		//TODO: Afegir a llista de plats
+		memset(aux, '\0', LENGTH);
+		sprintf(aux, "Comanda acceptada!\n");
+		print(aux);
+	} else if (!strcasecmp(frame.header, HEADER_REQ_DISH_KO)) {
+		memset(aux, '\0', LENGTH);
+		sprintf(aux, "Comanda rebutjada.\n%s\n", frame.data);
+		print(aux);
+	}
+
+	destroyFrame(&frame);
+	free(cmd.plat);
 }
 
 /**
@@ -164,18 +251,5 @@ void freeResources() {
 	print("\nGràcies per fer servir LsEat. Fins la propera.\n");
 	free(config.name);
 	free(config.ip);
-	freeHistory();
 }
 
-/**
- * Funció per a capturar el signal SIGINT i alliberar els recursos abans d'aturar l'execució.
- */
-void controlSigint() {
-	debug("\nSIGINT REBUT");
-	if (sock > 0) {
-		disconnect(config.name);
-		close(sock);
-	}
-	freeResources();
-	exit(EXIT_SUCCESS);
-}

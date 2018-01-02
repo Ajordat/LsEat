@@ -53,6 +53,7 @@ int sock_picard;
 //int fiUpdate;
 pthread_t update;
 pthread_mutex_t mutUsers;
+pthread_mutex_t mutMenu;
 int nUsers;
 
 

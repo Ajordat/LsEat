@@ -322,12 +322,14 @@ char solveCommand(char *command) {
 		case CODE_SHOWMENU:
 			debug("Toca mostrar el menú\n");
 			print("[Comanda OK]\n");
+			requestMenu();	//TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
 			break;
 
 		case CODE_REQUEST:
 			debug("Toca demanar\n");
 			print("[Comanda OK]\n");
-			free(cmd.plat);
+			requestDish(cmd);
+//			free(cmd.plat);		//Ja s'allibera a la funció
 			break;
 
 		case CODE_REMOVE:

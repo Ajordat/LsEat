@@ -149,7 +149,7 @@ void *updateInformation() {
 	char aux[LENGTH];
 	Frame frame;
 
-	while(1){
+	while (1) {
 		sleep((uint) config.refresh);
 		debug("[UPDATE]\n");
 		sock_data = createClientSocket(config.ip_data, config.port_data);
@@ -177,7 +177,7 @@ void *updateInformation() {
 void updateThread() {
 
 //	fiUpdate = 0;
-	pthread_create(&update, NULL,  updateInformation, NULL);
+	pthread_create(&update, NULL, updateInformation, NULL);
 //	pthread_detach(update);
 
 }
@@ -200,7 +200,8 @@ void listenSocket(int sock) {
 
 	addr_len = sizeof(addr);
 
-	mutUsers = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+	mutUsers = (pthread_mutex_t) PTHREAD_MUTEX_INITIALIZER;
+	mutMenu = (pthread_mutex_t) PTHREAD_MUTEX_INITIALIZER;
 	nUsers = 0;
 
 	while (1) {
@@ -225,6 +226,109 @@ void listenSocket(int sock) {
 
 }
 
+void sendMenu(int sock) {
+	int i, quantity;
+	Frame frame;
+	char dish[LENGTH];
+	char buffer[INT_LENGTH];
+
+	pthread_mutex_lock(&mutMenu);
+	quantity = menu.quantity;
+	pthread_mutex_unlock(&mutMenu);
+
+	for (i = 0; i < quantity; i++) {
+
+		memset(dish, '\0', LENGTH);
+		pthread_mutex_lock(&mutMenu);
+		memcpy(dish, menu.menu[i].name, strlen(menu.menu[i].name));
+		pthread_mutex_unlock(&mutMenu);
+
+		strcat(dish, "&");
+
+		memset(buffer, '\0', INT_LENGTH);
+		pthread_mutex_lock(&mutMenu);
+		myItoa(menu.menu[i].price, buffer);    // NOLINT
+		pthread_mutex_unlock(&mutMenu);
+		strcat(dish, buffer);
+
+		strcat(dish, "&");
+
+		memset(buffer, '\0', INT_LENGTH);
+		pthread_mutex_lock(&mutMenu);
+		myItoa(menu.menu[i].stock, buffer);    // NOLINT
+		pthread_mutex_unlock(&mutMenu);
+		strcat(dish, buffer);
+
+		frame = createFrame(CODE_SHOWMENU, "DISH", dish);
+		sendFrame(sock, frame);
+		destroyFrame(&frame);
+	}
+	frame = createFrame(CODE_SHOWMENU, "END_MENU", NULL);
+	sendFrame(sock, frame);
+	destroyFrame(&frame);
+}
+
+Dish parseDish(const char *string) {
+	Dish dish;
+	char aux[INT_LENGTH];
+	int i, j;
+
+	dish.name = malloc(sizeof(char));
+	for (i = 0; string[i] != '&'; i++) {
+		dish.name[i] = string[i];
+		dish.name = realloc(dish.name, (size_t) i + 2);
+	}
+	dish.name[i] = '\0';
+
+	memset(aux, '\0', INT_LENGTH);
+	for (j = 0, i++; string[i]; i++, j++) {
+		aux[j] = string[i];
+	}
+	dish.stock = atoi(aux);    // NOLINT
+
+	return dish;
+}
+
+void acceptDish(int sock, Frame frame) {
+	Dish dish;
+	int i, flag = 0, quantity;
+
+	dish = parseDish(frame.data);
+	destroyFrame(&frame);
+
+	pthread_mutex_lock(&mutMenu);
+	quantity = menu.quantity;
+	pthread_mutex_unlock(&mutMenu);
+
+	for (i = 0; i < quantity; i++) {
+		pthread_mutex_lock(&mutMenu);
+		if (!strcasecmp(menu.menu[i].name, dish.name)) {
+			if (menu.menu[i].stock >= dish.stock && dish.stock > 0) {
+				menu.menu[i].stock -= dish.stock;
+				pthread_mutex_unlock(&mutMenu);
+				frame = createFrame(CODE_REQUEST, "ORDOK", NULL);
+				debug("ORDOK\n");
+			} else {
+				pthread_mutex_unlock(&mutMenu);
+				frame = createFrame(CODE_REQUEST, "ORDKO",
+									dish.stock > 0 ? "No hi ha tant stock del plat." : "Valor d'stock incorrecte.");
+				debug("ORDKO\n");
+			}
+			flag = 1;
+		} else pthread_mutex_unlock(&mutMenu);
+	}
+
+	if (!flag) {
+		frame = createFrame(CODE_REQUEST, "ORDKO", "No s'ha trobat el plat demanat.");
+		debug("ORDKO\n");
+	}
+
+	sendFrame(sock, frame);
+
+	destroyFrame(&frame);
+	free(dish.name);
+}
+
 /**
  * Funció dedicada a un únic socket fins que aquest es desconnecti des de Picard. Aquesta funció es crida
  * en un thread deatached per a poder tenir diversos Picards de manera simultània.
@@ -242,12 +346,22 @@ void *attendPetition(void *sock_aux) {
 		frame = readFrame(sock);
 		debugFrame(frame);
 		switch (frame.type) {
+
 			case CODE_CONNECT:
 				connectPicard(sock, frame);
 				break;
 
 			case CODE_DISCONNECT:
 				disconnectPicard(sock, frame);
+				break;
+
+			case CODE_SHOWMENU:
+				destroyFrame(&frame);
+				sendMenu(sock);
+				break;
+
+			case CODE_REQUEST:
+				acceptDish(sock, frame);
 				break;
 
 			default:
@@ -278,8 +392,8 @@ void connectPicard(int sock, Frame frame) {
 	debug("[READING FRAME]\n");
 	for (ref = 0; name[ref] != '&'; ref++);
 
-	money = malloc(sizeof(char) * (frame.length - ref + 1));
-	memset(money, '\0', sizeof(char) * (frame.length - ref + 1));
+	money = malloc((size_t) frame.length - ref + 1);
+	memset(money, '\0', (size_t) frame.length - ref + 1);
 	debug("[READING MONEY]\n");
 	for (i = ref + 1; i < frame.length; i++)
 		money[i - ref - 1] = name[i];
@@ -291,8 +405,8 @@ void connectPicard(int sock, Frame frame) {
 	picard.money = atoi(money); // NOLINT
 	free(money);
 	name[ref] = '\0';
-	picard.name = malloc(sizeof(char) * (strlen(name) + 1));
-	memset(picard.name, '\0', sizeof(char) * (strlen(name) + 1));
+	picard.name = malloc((size_t) strlen(name) + 1);
+	memset(picard.name, '\0', (size_t) strlen(name) + 1);
 	strcpy(picard.name, name);    //TODO: Inserir a una llista de sockets
 	debug("[DONE]\n");
 
@@ -350,7 +464,7 @@ void disconnectPicard(int sock, Frame frame) {
 	free(frame.data);
 }
 
-void disconnectFromData(){
+void disconnectFromData() {
 	char aux[LENGTH];
 	Frame frame;
 
@@ -379,7 +493,6 @@ void freeResources() {
 	int i = 0;
 
 	//TODO: Avisar a Data de la desconnexió de l'Enterprise
-
 
 //	fiUpdate = 1;
 	pthread_cancel(update);

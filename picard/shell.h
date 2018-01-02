@@ -17,19 +17,14 @@
 #define	KEY_LEFT	'D'
 
 
-typedef struct {
-	char code;
-	int unitats;
-	char *plat;
-} Command;
-
-
-char **history;
 int nLog;
 int indexLog;
 struct termios old;
 
+
 void initShell();
+
+void shell();
 
 void appendCommand(Command);
 
@@ -38,5 +33,6 @@ char solveCommand(char *command);
 void freeHistory();
 
 void printHistory();
+
 
 #endif

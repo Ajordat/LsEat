@@ -3,6 +3,20 @@
 
 #include "shell.h"
 
+/**
+ * Funció per a capturar el signal SIGINT i alliberar els recursos abans d'aturar l'execució.
+ */
+void controlSigint() {
+	debug("\nSIGINT REBUT");
+	if (sock > 0) {
+		disconnect(config.name);
+		close(sock);
+	}
+	freeResources();
+	freeHistory();
+	exit(EXIT_SUCCESS);
+}
+
 
 int main(int argc, char **argv) {
 	char aux[LENGTH];

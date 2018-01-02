@@ -8,7 +8,8 @@
 
 #include "utils.h"
 #include "network.h"
-#include "shell.h"
+//#include "shell.h"
+
 
 #define ERR_UNK_CMD     (char)  0xFF
 #define ERR_N_PARAMS    (char)  0XFE
@@ -28,8 +29,21 @@
 #define	MSG_CONEX_OK		"Connexió realitzada!\n"
 
 #define	HEADER_PIC_DATA_OK		"ENT_INF"
+#define	HEADER_MENU_REQ			"SHW_MENU"
+#define	HEADER_MENU_DISH		"DISH"
+#define	HEADER_MENU_END			"END_MENU"
+#define	HEADER_REQ_DISH			"NEW_ORD"
+#define	HEADER_REQ_DISH_OK		"ORDOK"
+#define	HEADER_REQ_DISH_KO		"ORDKO"
+
+#define	MONEDA		"€"
 
 
+typedef struct {
+	char code;
+	int unitats;
+	char *plat;
+} Command;
 
 typedef struct {
     char *name;
@@ -38,8 +52,14 @@ typedef struct {
     int port;
 } Config;
 
+typedef struct {
+	char* name;
+	int price;
+	int stock;
+} Dish;
 
 
+char **history;
 Config config;
 
 
@@ -51,7 +71,9 @@ void readConfigFile(char *filename);
 
 char initConnection();
 
-void shell();
+void requestMenu();
+
+void requestDish(Command cmd);
 
 void controlSigint();
 

@@ -39,10 +39,30 @@ char *readFileDescriptor(int fd) {
 		if (mychar == '\n' || mychar == '\0' || !length)
 			return string;
 
-		string = realloc(string, sizeof(char) * (index + 2));
+		string = realloc(string, (size_t) index + 2);
 		string[index] = mychar;
 		string[index + 1] = '\0';
 		index++;
 	}
 }
 
+/**
+ * Funció per passar un número a ASCII.
+ * @param num 	Número a obtenir en ASCII
+ * @param buff 	Cadena amb el resultat
+ */
+void myItoa(int num, char *buff) {
+	int i, j;
+	char aux;
+
+	for (i = 0; num > 0; i++) {
+		buff[i] = (char) (num % 10 + '0');
+		num /= 10;
+	}
+	buff[i] = '\0';
+	for (j = 0; j < i / 2; j++) {
+		aux = buff[j];
+		buff[j] = buff[i - j - 1];
+		buff[i - j - 1] = aux;
+	}
+}

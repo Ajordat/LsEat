@@ -9,8 +9,8 @@
 #include "utils.h"
 
 
-#define HEADER_SIZE		10
-#define FRAME_NULL		-1
+#define HEADER_SIZE        10
+#define FRAME_NULL        -1
 
 
 typedef struct {
@@ -28,6 +28,8 @@ char sendFrame(int socket, Frame);
 Frame receiveFrame(int socket);
 
 Frame createFrame(char type, char *header, char *data);
+
+void destroyFrame(Frame *);
 
 void debugFrame(Frame);
 

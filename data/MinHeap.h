@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include "utils.h"
 
+#define NO_FREE 0
+#define FREE	1
+
 typedef struct {
 	char *name;
 	char *ip;
@@ -33,7 +36,7 @@ Enterprise HEAP_pop(MinHeap *);
 
 void HEAP_push(MinHeap *, Enterprise);
 
-char HEAP_remove(MinHeap *, int index);
+char HEAP_remove(MinHeap *, int index, int ffree);
 
 void HEAP_close(MinHeap *);
 

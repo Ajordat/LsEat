@@ -2,9 +2,9 @@ LOGIN1 = ls30687
 LOGIN2 = ls31285
 GRUP = 18
 FASE = 3
-CFLAGS = -Wall -Wextra
+CFLAGS = -Wall -Wextra -g
 MAIN = main.c
-MODULES = logica utils network network_utils shell
+MODULES = logica shell utils network network_utils
 EXE = picard
 
 FILES = $(MAIN) $(patsubst %,%.c, $(MODULES))
