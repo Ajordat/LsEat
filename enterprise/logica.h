@@ -71,7 +71,7 @@ void *attendPetition(void *sock);
 
 void connectPicard(int sock, Frame frame);
 
-void disconnectPicard(int sock, Frame frame);
+void disconnectPicard(int sock, Frame frame, Menu *dishes);
 
 void freeResources();
 

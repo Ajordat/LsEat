@@ -213,6 +213,8 @@ void requestDish(Command cmd) {
 	Frame frame;
 	char aux[LENGTH];
 	char buffer[INT_LENGTH];
+	int i;
+	size_t length;
 
 	memset(aux, '\0', LENGTH);
 	memcpy(aux, cmd.plat, strlen(cmd.plat));
@@ -227,14 +229,28 @@ void requestDish(Command cmd) {
 	writeFrame(frame);
 	destroyFrame(&frame);
 
-	frame = readFrame();	//TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
+	frame = readFrame();    //TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
 
-	if (!strcasecmp(frame.header, HEADER_REQ_DISH_OK)) {
-		//TODO: Afegir a llista de plats
+	if (!strcasecmp(frame.header, HEADER_ORDER_OK)) {
 		memset(aux, '\0', LENGTH);
 		sprintf(aux, "Comanda acceptada!\n");
 		print(aux);
-	} else if (!strcasecmp(frame.header, HEADER_REQ_DISH_KO)) {
+		for (i = 0; i < dishes.quantity; i++) {
+			if (!strcasecmp(dishes.menu[i].name, cmd.plat)) {
+				dishes.menu[i].stock += cmd.unitats;
+				break;
+			}
+		}
+		if (i == dishes.quantity) {
+			dishes.quantity++;
+			dishes.menu = realloc(dishes.menu, sizeof(Dish) * dishes.quantity);
+			length = strlen(cmd.plat) + 1;
+			dishes.menu[i].name = malloc(length);
+			memcpy(dishes.menu[i].name, cmd.plat, length);
+			dishes.menu[i].stock = cmd.unitats;
+		}
+
+	} else if (!strcasecmp(frame.header, HEADER_ORDER_KO)) {
 		memset(aux, '\0', LENGTH);
 		sprintf(aux, "Comanda rebutjada.\n%s\n", frame.data);
 		print(aux);
@@ -244,12 +260,71 @@ void requestDish(Command cmd) {
 	free(cmd.plat);
 }
 
+void removeDish(Command cmd) {
+	Frame frame;
+	char aux[LENGTH];
+	char buffer[INT_LENGTH];
+	int i;
+
+
+	for (i = 0; i < dishes.quantity; i++)
+		if (!strcasecmp(dishes.menu[i].name, cmd.plat))
+			break;
+
+	if (i == dishes.quantity) {
+		sprintf(aux, "No has demanat el plat %s\n", cmd.plat);
+		print(aux);
+		return;
+	}
+
+	if (cmd.unitats > dishes.menu[i].stock) {
+		sprintf(aux, "Vols eliminar %d unitats i només n'has demanat %d.\n", cmd.unitats, dishes.menu[i].stock);
+		print(aux);
+		return;
+	}
+
+	memset(aux, '\0', LENGTH);
+	memcpy(aux, cmd.plat, strlen(cmd.plat));
+
+	strcat(aux, "&");
+
+	memset(buffer, '\0', INT_LENGTH);
+	myItoa(cmd.unitats, buffer);
+	strcat(aux, buffer);
+
+	frame = createFrame(CODE_REMOVE, HEADER_DEL_DISH, aux);
+	writeFrame(frame);
+	destroyFrame(&frame);
+
+	frame = readFrame();    //TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
+
+	if (!strcasecmp(frame.header, HEADER_ORDER_OK)) {
+		memset(aux, '\0', LENGTH);
+		sprintf(aux, "Comanda acceptada!\n");
+		print(aux);
+
+		dishes.menu[i].stock -= cmd.unitats;
+
+	} else if (!strcasecmp(frame.header, HEADER_ORDER_KO)) {
+		memset(aux, '\0', LENGTH);
+		sprintf(aux, "Comanda rebutjada.\n%s\n", frame.data);
+		print(aux);
+	}
+}
+
 /**
  * Funció per alliberar els recursos del programa.
  */
 void freeResources() {
+	int i;
+
 	print("\nGràcies per fer servir LsEat. Fins la propera.\n");
 	free(config.name);
 	free(config.ip);
+
+	for (i = 0; i < dishes.quantity; i++) {
+		free(dishes.menu[i].name);
+	}
+	free(dishes.menu);
 }
 

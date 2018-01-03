@@ -30,6 +30,7 @@ char checkParameters(int index, const char *command, char code) {
  */
 Command substractCommand(char *command) {
 	int i = 0;
+	size_t length;
 	char *word;
 	Command cmd;
 
@@ -54,7 +55,8 @@ Command substractCommand(char *command) {
 		} else {
 			cmd.code = ERR_UNK_CMD;
 			cmd.plat = malloc((size_t) strlen(command) + 1);
-			memcpy(cmd.plat, command, (size_t) strlen(command) + 1);
+			memset(cmd.plat, '\0', (size_t) strlen(command) + 1);
+			memcpy(cmd.plat, command, (size_t) strlen(command));
 		}
 
 	} else if (!strcasecmp(CMD_REQUEST, word)) {
@@ -63,17 +65,19 @@ Command substractCommand(char *command) {
 		word = getWord(&i, command);
 		if (checkNumber(word)) {
 			cmd.unitats = atoi(word);  // NOLINT
-			cmd.plat = getWord(&i, command);
-			if (cmd.plat[0] == '\0') {
+			while (command[i] == ' ' || command[i] == '\t') i++;
+			if (endOfWord(i, command)) {
 				cmd.code = ERR_N_PARAMS;
 				free(cmd.plat);
 			} else {
-				cmd.code = checkParameters(i, command, CODE_REQUEST);
-				if (cmd.code != CODE_REQUEST)
-					free(cmd.plat);
+				length = strlen(command) - i + 1;
+				cmd.plat = malloc(length);
+				memmove(cmd.plat, command + i, length);
+				cmd.code = CODE_REQUEST;
 			}
 		} else {
 			cmd.code = ERR_N_PARAMS;
+			cmd.plat = NULL;
 		}
 
 	} else if (!strcasecmp(CMD_REMOVE, word)) {
@@ -113,7 +117,7 @@ Command substractCommand(char *command) {
 }
 
 void appendCommand(Command cmd) {
-	char aux[10];
+	char aux[INT_LENGTH];
 	size_t length;
 
 	if (history[nLog] != NULL)
@@ -128,7 +132,8 @@ void appendCommand(Command cmd) {
 		case CODE_SHOWMENU:
 			length = strlen(CMD_SHOW) + 1 + strlen(CMD_MENU) + 1;
 			history[nLog] = malloc(length);
-			memcpy(history[nLog], CMD_SHOW, length);
+			memset(history[nLog], '\0', length);
+			sprintf(history[nLog], "%s %s", CMD_SHOW, CMD_MENU);
 			break;
 		case CODE_REQUEST:
 			myItoa(cmd.unitats, aux);
@@ -156,13 +161,14 @@ void appendCommand(Command cmd) {
 			break;
 		default:
 			if (cmd.plat != NULL) {
-				debug("Plat -> ");
+				debug("Plat -> |");
 				debug(cmd.plat);
-				debug("\n");
+				debug("|\n");
 				length = strlen(cmd.plat) + 1;
 				history[nLog] = malloc(length);
 				memcpy(history[nLog], cmd.plat, length);
-			}
+			} else
+				nLog--;
 			break;
 	}
 	nLog++;
@@ -189,8 +195,7 @@ void printRemainingCommand(char *string, int index, int size) {
 	int i;
 	for (i = index; i <= size; i++)
 		write(STDOUT_FILENO, &string[i], sizeof(char));
-	write(STDOUT_FILENO, " ", sizeof(char));
-	for (; i > index; i--)
+	for (; i > index + 1; i--)
 		write(STDOUT_FILENO, "\b", sizeof(char));
 }
 
@@ -261,7 +266,7 @@ char *readCommand() {
 						break;
 				}
 			}
-		} else if ((mychar &= 0xFF) == 0177) {	//delete char
+		} else if ((mychar &= 0xFF) == 0177) {    //delete char
 			if (index > 0) {
 				size--;
 				index--;
@@ -270,24 +275,26 @@ char *readCommand() {
 					history[indexLog][size] = '\0';
 					write(STDOUT_FILENO, "\b \b", (size_t) 3);
 				} else {
-					shiftLeft(history[indexLog], index, size - index);
+					memmove(history[indexLog] + index, history[indexLog] + index + 1, (size_t) size - index + 1);
 					history[indexLog] = realloc(history[indexLog], (size_t) size + 1);
 					write(STDOUT_FILENO, "\b", sizeof(char));
 					printRemainingCommand(history[indexLog], index, size);
 				}
 			}
 		} else {    //insert char
-			write(STDOUT_FILENO, &mychar, sizeof(char));
-			history[indexLog] = realloc(history[indexLog], (size_t) size + 2);
-			index++;
-			size++;
-			if (index == size) {
-				history[indexLog][size - 1] = mychar;
-				history[indexLog][size] = '\0';
-			} else {
-				shiftRight(history[indexLog], index - 1);
-				history[indexLog][index - 1] = mychar;
-				printRemainingCommand(history[indexLog], index, size);
+			if (size < SHELL_LENGTH) {
+				size++;
+				write(STDOUT_FILENO, &mychar, sizeof(char));
+				history[indexLog] = realloc(history[indexLog], (size_t) size + 1);
+				if (index + 1 == size) {
+					history[indexLog][size - 1] = mychar;
+					history[indexLog][size] = '\0';
+				} else {
+					memmove(history[indexLog] + index + 1, history[indexLog] + index, (size_t) size - index);
+					history[indexLog][index] = mychar;
+					printRemainingCommand(history[indexLog], index + 1, size);
+				}
+				index++;
 			}
 		}
 	}
@@ -321,26 +328,40 @@ char solveCommand(char *command) {
 
 		case CODE_SHOWMENU:
 			debug("Toca mostrar el menú\n");
-			print("[Comanda OK]\n");
-			requestMenu();	//TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
+			if (connected) {
+				print("[Comanda OK]\n");
+				requestMenu();    //TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
+			} else
+				print("[Comanda KO] Encara no t'has connectat!\n");
 			break;
 
 		case CODE_REQUEST:
 			debug("Toca demanar\n");
-			print("[Comanda OK]\n");
-			requestDish(cmd);
-//			free(cmd.plat);		//Ja s'allibera a la funció
+			if (connected) {
+				print("[Comanda OK]\n");
+				requestDish(cmd);
+			} else
+				print("[Comanda KO] Encara no t'has connectat!\n");
 			break;
 
 		case CODE_REMOVE:
 			debug("Toca eliminar\n");
-			print("[Comanda OK]\n");
+			if (connected) {
+				print("[Comanda OK]\n");
+				//Petició
+				removeDish(cmd);
+			} else
+				print("[Comanda KO] Encara no t'has connectat!\n");
 			free(cmd.plat);
 			break;
 
 		case CODE_PAY:
 			debug("Toca pagar\n");
-			print("[Comanda OK]\n");
+			if (connected) {
+				print("[Comanda OK]\n");
+				//Petició
+			} else
+				print("[Comanda KO] Encara no t'has connectat!\n");
 			break;
 
 		case CODE_DISCONNECT:
@@ -350,20 +371,20 @@ char solveCommand(char *command) {
 			debug("Toca desconnectar\n");
 			if (connected) {
 				resp = disconnect(config.name);
-				if (resp){
+				if (resp)
 					close(sock);
-				} else {
+				else
 					print("S'ha perdut la connexió amb el servidor!\n");
-				}
-			} else {
+			} else
 				print("Encara no t'havies connectat!\n");
-			}
+
 			freeResources();
+			freeHistory();
 			return 1;
 
 		case ERR_UNK_CMD:
 			print("Comanda no reconeguda");
-			sprintf(aux, " -> [%s]", command);
+			sprintf(aux, " -> [%s]", history[nLog - 1]);
 			debug(aux);
 			print("\n");
 			free(cmd.plat);
@@ -378,6 +399,7 @@ char solveCommand(char *command) {
 			break;
 
 	}
+
 	return 0;
 }
 

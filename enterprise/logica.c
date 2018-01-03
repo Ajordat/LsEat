@@ -109,7 +109,7 @@ void readMenuFile(char *filename) {
 	}
 
 	menu.menu = NULL;
-	menu.quantity = index = 0;
+	index = 0;
 	dish.name = NULL;
 
 	while (1) {
@@ -289,9 +289,11 @@ Dish parseDish(const char *string) {
 	return dish;
 }
 
-void acceptDish(int sock, Frame frame) {
+void acceptDish(int sock, Frame frame, Menu *dishes) {
 	Dish dish;
 	int i, flag = 0, quantity;
+	size_t length;
+	char aux[LENGTH];
 
 	dish = parseDish(frame.data);
 	destroyFrame(&frame);
@@ -308,6 +310,24 @@ void acceptDish(int sock, Frame frame) {
 				pthread_mutex_unlock(&mutMenu);
 				frame = createFrame(CODE_REQUEST, "ORDOK", NULL);
 				debug("ORDOK\n");
+				for (i = 0; i < dishes->quantity; i++) {
+					if (!strcasecmp(dishes->menu[i].name, dish.name)) {
+						dishes->menu[i].stock += dish.stock;
+						break;
+					}
+				}
+				if (i == dishes->quantity) {
+					dishes->quantity++;
+					dishes->menu = realloc(dishes->menu, sizeof(Dish) * dishes->quantity);
+					length = strlen(dish.name) + 1;
+					dishes->menu[i].name = malloc(length);
+					memcpy(dishes->menu[i].name, dish.name, length);
+					dishes->menu[i].stock = dish.stock;
+				}
+				for (i = 0; i < dishes->quantity; i++) {
+					sprintf(aux, "[ADDED] %s (x%d)\n", dishes->menu[i].name, dishes->menu[i].stock);
+					debug(aux);
+				}
 			} else {
 				pthread_mutex_unlock(&mutMenu);
 				frame = createFrame(CODE_REQUEST, "ORDKO",
@@ -315,11 +335,54 @@ void acceptDish(int sock, Frame frame) {
 				debug("ORDKO\n");
 			}
 			flag = 1;
+			break;
 		} else pthread_mutex_unlock(&mutMenu);
 	}
 
 	if (!flag) {
 		frame = createFrame(CODE_REQUEST, "ORDKO", "No s'ha trobat el plat demanat.");
+		debug("ORDKO\n");
+	}
+
+	sendFrame(sock, frame);
+
+	destroyFrame(&frame);
+	free(dish.name);
+}
+
+void removeDish(int sock, Frame frame, Menu *dishes) {
+	Dish dish;
+	int i, flag;
+
+	dish = parseDish(frame.data);
+	destroyFrame(&frame);
+
+	for (i = 0, flag = 0; i < dishes->quantity; i++) {
+		if (!strcasecmp(dish.name, dishes->menu[i].name)) {
+			if (dishes->menu[i].stock >= dish.stock && dish.stock > 0) {
+				dishes->menu[i].stock -= dish.stock;
+				pthread_mutex_lock(&mutMenu);
+				for (i = 0; i < menu.quantity; i++) {
+					if (!strcasecmp(dish.name, menu.menu[i].name)) {
+						menu.menu[i].stock += dish.stock;
+						pthread_mutex_unlock(&mutMenu);
+						frame = createFrame(CODE_REMOVE, "ORDOK", NULL);
+						debug("ORDOK\n");
+						flag = 1;
+						break;
+					}
+				}
+				pthread_mutex_unlock(&mutMenu);
+			} else {
+				frame = createFrame(CODE_REMOVE, "ORDKO", "No es pot cancelar aquesta quantitat d'unitats.");
+				debug("ORDKO\n");
+			}
+			break;
+		}
+	}
+
+	if (!flag) {
+		frame = createFrame(CODE_REMOVE, "ORDKO", "No s'ha trobat el plat demanat.");
 		debug("ORDKO\n");
 	}
 
@@ -338,9 +401,13 @@ void acceptDish(int sock, Frame frame) {
  */
 void *attendPetition(void *sock_aux) {
 	Frame frame;
+	Menu dishes;
 	int sock = *((int *) sock_aux);
 
+
 	free(sock_aux);
+	dishes.quantity = 0;
+	dishes.menu = NULL;
 
 	do {
 		frame = readFrame(sock);
@@ -352,7 +419,7 @@ void *attendPetition(void *sock_aux) {
 				break;
 
 			case CODE_DISCONNECT:
-				disconnectPicard(sock, frame);
+				disconnectPicard(sock, frame, &dishes);
 				break;
 
 			case CODE_SHOWMENU:
@@ -361,7 +428,11 @@ void *attendPetition(void *sock_aux) {
 				break;
 
 			case CODE_REQUEST:
-				acceptDish(sock, frame);
+				acceptDish(sock, frame, &dishes);
+				break;
+
+			case CODE_REMOVE:
+				removeDish(sock, frame, &dishes);
 				break;
 
 			default:
@@ -438,15 +509,16 @@ void connectPicard(int sock, Frame frame) {
  * @param sock 		Socket de la communicació
  * @param frame 	Trama rebuda amb informació sobre el Picard.
  */
-void disconnectPicard(int sock, Frame frame) {
+void disconnectPicard(int sock, Frame frame, Menu *dishes) {
 	char *name;
 	char aux[LENGTH];
+	int i, j;
 
 	name = malloc(sizeof(char) * (strlen(frame.data) + 1));
 	memset(name, '\0', sizeof(char) * (strlen(frame.data) + 1));
 	strcpy(name, frame.data);
 
-	free(frame.data);
+	destroyFrame(&frame);
 
 	debug("[SENDING FRAME]\n");
 	frame = createFrame(CODE_DISCONNECT, HEADER_PIC_ENT_DISC_OK, NULL);    //TODO: Hi haurà algun cas que serà KO
@@ -461,7 +533,19 @@ void disconnectPicard(int sock, Frame frame) {
 	sprintf(aux, MSG_DISC_PIC, name);
 	print(aux);
 	free(name);
-	free(frame.data);
+	destroyFrame(&frame);
+
+	pthread_mutex_lock(&mutMenu);
+	for (i = 0; i < dishes->quantity; i++) {
+		for (j = 0; j < menu.quantity; j++) {
+			if (!strcasecmp(dishes->menu[i].name, menu.menu[j].name)) {
+				menu.menu[j].stock += dishes->menu[i].stock;
+				break;
+			}
+		}
+		free(dishes->menu[i].name);
+	}
+	pthread_mutex_unlock(&mutMenu);
 }
 
 void disconnectFromData() {

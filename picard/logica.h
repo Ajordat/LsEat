@@ -30,11 +30,11 @@
 
 #define	HEADER_PIC_DATA_OK		"ENT_INF"
 #define	HEADER_MENU_REQ			"SHW_MENU"
-#define	HEADER_MENU_DISH		"DISH"
 #define	HEADER_MENU_END			"END_MENU"
 #define	HEADER_REQ_DISH			"NEW_ORD"
-#define	HEADER_REQ_DISH_OK		"ORDOK"
-#define	HEADER_REQ_DISH_KO		"ORDKO"
+#define	HEADER_DEL_DISH			"DEL_ORD"
+#define	HEADER_ORDER_OK			"ORDOK"
+#define	HEADER_ORDER_KO			"ORDKO"
 
 #define	MONEDA		"€"
 
@@ -58,9 +58,15 @@ typedef struct {
 	int stock;
 } Dish;
 
+typedef struct {
+	Dish *menu;
+	int quantity;
+} Menu;
+
 
 char **history;
 Config config;
+Menu dishes;
 
 
 char checkProgramArguments(int argc);
@@ -74,6 +80,8 @@ char initConnection();
 void requestMenu();
 
 void requestDish(Command cmd);
+
+void removeDish(Command cmd);
 
 void controlSigint();
 

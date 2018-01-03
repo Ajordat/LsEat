@@ -132,24 +132,3 @@ void myItoa(int num, char *buff) {
 		buff[i - j - 1] = aux;
 	}
 }
-
-
-void shiftLeft(char *string, int index, int size) {
-	if (string[index] == '\0') return;
-	memmove(string + index, string + index + 1, (size_t) size + 1);
-}
-
-void shiftRight(char *string, int index) {
-//	char aux;
-//	int length = (int) strlen(string) + 1;
-	int length = index;
-	if (string[index] == '\0') return;
-	while (string[length++]);
-	memmove(string + index + 1, string + index, (size_t) length - index - 1);
-//	while (length-- != index) {
-//		aux = string[length];
-//		string[length] = string[length + 1];
-//		string[length + 1] = aux;
-//	}
-	string[index] = ' ';
-}

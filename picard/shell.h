@@ -16,6 +16,7 @@
 #define	KEY_RIGHT	'C'
 #define	KEY_LEFT	'D'
 
+#define SHELL_LENGTH	70
 
 int nLog;
 int indexLog;

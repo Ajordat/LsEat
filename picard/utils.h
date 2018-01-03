@@ -18,10 +18,6 @@ void debug(char *msg);
 
 void print(char *msg);
 
-void printc(char mychar);
-
-void printi(int myint);
-
 char *getWord(int *index, const char *string);
 
 char endOfWord(int index, const char *string);
@@ -31,10 +27,6 @@ char checkNumber(const char *word);
 char * readFileDescriptor(int fd);
 
 void myItoa(int num, char *buff);
-
-void shiftLeft(char *string, int index, int size);
-
-void shiftRight(char *string, int index);
 
 
 #endif
