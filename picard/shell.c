@@ -101,7 +101,7 @@ Command substractCommand(char *command) {
 
 	} else if (!strcasecmp(CMD_PAY, word)) {
 
-		cmd.code = checkParameters(i, command, CODE_PAY);
+		cmd.code = checkParameters(i, command, CODE_PAYMENT);
 
 	} else if (!strcasecmp(CMD_DISCONNECT, word)) {
 
@@ -149,7 +149,7 @@ void appendCommand(Command cmd) {
 			memset(history[nLog], '\0', length);    //Aquest length era length-2
 			sprintf(history[nLog], "%s %d %s", CMD_REMOVE, cmd.unitats, cmd.plat);
 			break;
-		case CODE_PAY:
+		case CODE_PAYMENT:
 			length = strlen(CMD_PAY) + 1;
 			history[nLog] = malloc(length);
 			memcpy(history[nLog], CMD_PAY, length);
@@ -173,7 +173,7 @@ void appendCommand(Command cmd) {
 	}
 	nLog++;
 
-	printHistory();
+//	printHistory();
 }
 
 char readChar() {
@@ -208,7 +208,6 @@ char *readCommand() {
 	char mychar;
 	int index = 0, size = 0;
 
-	//TODO: Arreglar si ens introdueixen una comanda incorrecta, hi ha fugues de memòria en aquests casos
 	history = realloc(history, (nLog + 1) * sizeof(char *));
 	history[nLog] = NULL;
 	indexLog = nLog;
@@ -308,10 +307,12 @@ char *readCommand() {
  * @return 			Un flag indicant si s'ha de tancar l'execució del Picard
  */
 char solveCommand(char *command) {
-	Command cmd = substractCommand(command);
+	Command cmd;
 	static char connected = 0;
 	char aux[LENGTH];
 	char resp;
+
+	cmd = substractCommand(command);
 
 	if (command != NULL)
 		appendCommand(cmd);
@@ -330,7 +331,14 @@ char solveCommand(char *command) {
 			debug("Toca mostrar el menú\n");
 			if (connected) {
 				print("[Comanda OK]\n");
-				requestMenu();    //TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
+				resp = requestMenu();
+				if(!resp){
+					print("S'ha perdut la connexió amb el servidor!\n");
+					close(sock);
+					connected = recoverConnection();	//TODO: RECUPERAR CONNEXIÓ
+//					if (connected)
+//						solveCommand(command);
+				}
 			} else
 				print("[Comanda KO] Encara no t'has connectat!\n");
 			break;
@@ -339,41 +347,52 @@ char solveCommand(char *command) {
 			debug("Toca demanar\n");
 			if (connected) {
 				print("[Comanda OK]\n");
-				requestDish(cmd);
+				resp = requestDish(cmd);
+				if(!resp){
+					print("S'ha perdut la connexió amb el servidor!\n");
+					close(sock);
+					connected = 0;	//TODO: RECUPERAR CONNEXIÓ
+				}
 			} else
 				print("[Comanda KO] Encara no t'has connectat!\n");
+			free(cmd.plat);
 			break;
 
 		case CODE_REMOVE:
 			debug("Toca eliminar\n");
 			if (connected) {
 				print("[Comanda OK]\n");
-				//Petició
-				removeDish(cmd);
+				resp = removeDish(cmd);
+				if(!resp){
+					print("S'ha perdut la connexió amb el servidor!\n");
+					close(sock);
+					connected = 0;	//TODO: RECUPERAR CONNEXIÓ
+				}
 			} else
 				print("[Comanda KO] Encara no t'has connectat!\n");
 			free(cmd.plat);
 			break;
 
-		case CODE_PAY:
+		case CODE_PAYMENT:
 			debug("Toca pagar\n");
 			if (connected) {
 				print("[Comanda OK]\n");
-				//Petició
+				resp = requestPayment();
+				if(!resp){
+					print("S'ha perdut la connexió amb el servidor!\n");
+					close(sock);
+					connected = 0;	//TODO: RECUPERAR CONNEXIÓ
+				}
 			} else
 				print("[Comanda KO] Encara no t'has connectat!\n");
 			break;
 
 		case CODE_DISCONNECT:
-			/* TODO: Si connectem amb èxit amb un Enterprise i aquest es tanca abans que fem un DESCONNECTA,
-			 * no alliberem tots els recursos.
-			 * */
 			debug("Toca desconnectar\n");
 			if (connected) {
 				resp = disconnect(config.name);
-				if (resp)
-					close(sock);
-				else
+				close(sock);
+				if (!resp)
 					print("S'ha perdut la connexió amb el servidor!\n");
 			} else
 				print("Encara no t'havies connectat!\n");

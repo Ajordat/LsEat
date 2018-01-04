@@ -11,7 +11,7 @@
 #define CODE_SHOWMENU   (char)  0x03
 #define CODE_REQUEST    (char)  0x04
 #define CODE_REMOVE     (char)  0x05
-#define CODE_PAY        (char)  0x06
+#define CODE_PAYMENT        (char)  0x06
 
 
 typedef struct {

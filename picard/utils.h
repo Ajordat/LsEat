@@ -11,7 +11,7 @@
 
 #define LENGTH		100
 #define INT_LENGTH	12
-#define DEBUG		1
+#define DEBUG		0
 
 
 void debug(char *msg);

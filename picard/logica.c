@@ -122,7 +122,7 @@ char tryConnectionEnterprise(Frame frame) {
 	socket = resolveEnterprise(frame);
 
 	sock = createClientSocket(socket.ip, socket.port);
-	if (sock < 0) {
+	if (sock < 0) {                //TODO: MILLORAR MISSATGE D'ERROR
 		debug("[FAILURE]\n");
 		print(MSG_PIC_ENT_KO);
 		free(socket.ip);
@@ -184,17 +184,24 @@ Dish parseDish(const char *string) {
 	return dish;
 }
 
-void requestMenu() {
+char requestMenu() {
 	Frame frame;
 	Dish dish;
 	char aux[LENGTH];
+	int resp;
 
 	frame = createFrame(CODE_SHOWMENU, HEADER_MENU_REQ, NULL);
-	writeFrame(frame);
+	resp = writeFrame(frame);
+	destroyFrame(&frame);
+
+	if (!resp)
+		return 0;
 
 	while (1) {
-		destroyFrame(&frame);
 		frame = readFrame();    //TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
+
+		if (frame.type == FRAME_NULL)
+			return 0;
 
 		if (!strcmp(frame.header, HEADER_MENU_END)) break;
 
@@ -204,16 +211,18 @@ void requestMenu() {
 			sprintf(aux, "%s (x%d) --- %d%s\n", dish.name, dish.stock, dish.price, MONEDA);
 			print(aux);
 		}
+		destroyFrame(&frame);
 		free(dish.name);
 	}
 	destroyFrame(&frame);
+	return 1;
 }
 
-void requestDish(Command cmd) {
+char requestDish(Command cmd) {
 	Frame frame;
 	char aux[LENGTH];
 	char buffer[INT_LENGTH];
-	int i;
+	int i, resp;
 	size_t length;
 
 	memset(aux, '\0', LENGTH);
@@ -226,10 +235,16 @@ void requestDish(Command cmd) {
 	strcat(aux, buffer);
 
 	frame = createFrame(CODE_REQUEST, HEADER_REQ_DISH, aux);
-	writeFrame(frame);
+	resp = writeFrame(frame);
 	destroyFrame(&frame);
 
-	frame = readFrame();    //TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
+	if (!resp)
+		return 0;
+
+	frame = readFrame();
+
+	if (frame.type == FRAME_NULL)
+		return 0;
 
 	if (!strcasecmp(frame.header, HEADER_ORDER_OK)) {
 		memset(aux, '\0', LENGTH);
@@ -257,14 +272,14 @@ void requestDish(Command cmd) {
 	}
 
 	destroyFrame(&frame);
-	free(cmd.plat);
+	return 1;
 }
 
-void removeDish(Command cmd) {
+char removeDish(Command cmd) {
 	Frame frame;
 	char aux[LENGTH];
 	char buffer[INT_LENGTH];
-	int i;
+	int i, resp;
 
 
 	for (i = 0; i < dishes.quantity; i++)
@@ -274,13 +289,13 @@ void removeDish(Command cmd) {
 	if (i == dishes.quantity) {
 		sprintf(aux, "No has demanat el plat %s\n", cmd.plat);
 		print(aux);
-		return;
+		return 0;
 	}
 
 	if (cmd.unitats > dishes.menu[i].stock) {
 		sprintf(aux, "Vols eliminar %d unitats i només n'has demanat %d.\n", cmd.unitats, dishes.menu[i].stock);
 		print(aux);
-		return;
+		return 0;
 	}
 
 	memset(aux, '\0', LENGTH);
@@ -293,10 +308,16 @@ void removeDish(Command cmd) {
 	strcat(aux, buffer);
 
 	frame = createFrame(CODE_REMOVE, HEADER_DEL_DISH, aux);
-	writeFrame(frame);
+	resp = writeFrame(frame);
 	destroyFrame(&frame);
 
+	if (!resp)
+		return 0;
+
 	frame = readFrame();    //TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
+
+	if (frame.type == FRAME_NULL)
+		return 0;
 
 	if (!strcasecmp(frame.header, HEADER_ORDER_OK)) {
 		memset(aux, '\0', LENGTH);
@@ -310,6 +331,108 @@ void removeDish(Command cmd) {
 		sprintf(aux, "Comanda rebutjada.\n%s\n", frame.data);
 		print(aux);
 	}
+
+	destroyFrame(&frame);
+	return 1;
+}
+
+char requestPayment() {
+	Frame frame;
+	char aux[LENGTH];
+	char buffer[INT_LENGTH];
+	int i, resp;
+
+	memset(buffer, '\0', INT_LENGTH);
+	myItoa(config.money, buffer);
+
+	frame = createFrame(CODE_PAYMENT, HEADER_PAYMENT, buffer);
+
+	resp = writeFrame(frame);
+	destroyFrame(&frame);
+
+	if (!resp)
+		return 0;
+
+	frame = readFrame();
+
+	if (frame.type == FRAME_NULL)
+		return 0;
+
+	if (!strcasecmp(frame.header, HEADER_PAYMENT_OK)) {
+		config.money = atoi(frame.data);    // NOLINT
+		memset(aux, '\0', LENGTH);
+		sprintf(aux, "Pagament acceptat!\nEt queden %d%s\n", config.money, MONEDA);
+		print(aux);
+		for (i = 0; i < dishes.quantity; i++){
+			free(dishes.menu[i].name);
+		}
+		free(dishes.menu);
+		dishes.quantity = 0;
+	} else if (!strcasecmp(frame.header, HEADER_PAYMENT_KO)) {
+		memset(aux, '\0', LENGTH);
+		sprintf(aux, "Pagament rebutjat.\n%s\n", frame.data);
+		print(aux);
+	}
+
+	destroyFrame(&frame);
+	return 1;
+}
+
+char recoverConnection(){
+	char connected;
+	Frame frame;
+	char aux[LENGTH];
+	char buffer[INT_LENGTH];
+	int i, resp;
+
+
+	print("Iniciant recuperació automàtica...\n");
+	connected = initConnection();
+
+	if(!connected){
+		print("No s'ha pogut recuperar automàticament la connexió.\n");
+		return 0;
+	}
+
+	for(i = 0; i < dishes.quantity; i++){
+
+		memset(aux, '\0', LENGTH);
+		memcpy(aux, dishes.menu[i].name, strlen(dishes.menu[i].name));
+
+		strcat(aux, "&");
+
+		memset(buffer, '\0', INT_LENGTH);
+		myItoa(dishes.menu[i].stock, buffer);
+		strcat(aux, buffer);
+
+		frame = createFrame(CODE_REQUEST, HEADER_REQ_DISH, aux);
+		resp = writeFrame(frame);
+		destroyFrame(&frame);
+
+		if (!resp)
+			return 0;
+
+		frame = readFrame();
+
+		if (frame.type == FRAME_NULL)
+			return 0;
+
+		if (!strcasecmp(frame.header, HEADER_ORDER_OK)) {
+			memset(aux, '\0', LENGTH);
+			sprintf(aux, "Comanda acceptada!\n");
+			print(aux);
+
+		} else if (!strcasecmp(frame.header, HEADER_ORDER_KO)) {
+			memset(aux, '\0', LENGTH);
+			sprintf(aux, "Comanda rebutjada. %s\n", frame.data);
+			print(aux);
+			dishes.menu[i].stock = 0;
+		}
+
+		destroyFrame(&frame);
+	}
+
+	return connected;
 }
 
 /**

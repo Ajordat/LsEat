@@ -307,6 +307,7 @@ void acceptDish(int sock, Frame frame, Menu *dishes) {
 		if (!strcasecmp(menu.menu[i].name, dish.name)) {
 			if (menu.menu[i].stock >= dish.stock && dish.stock > 0) {
 				menu.menu[i].stock -= dish.stock;
+				dish.price = menu.menu[i].price;
 				pthread_mutex_unlock(&mutMenu);
 				frame = createFrame(CODE_REQUEST, "ORDOK", NULL);
 				debug("ORDOK\n");
@@ -323,6 +324,7 @@ void acceptDish(int sock, Frame frame, Menu *dishes) {
 					dishes->menu[i].name = malloc(length);
 					memcpy(dishes->menu[i].name, dish.name, length);
 					dishes->menu[i].stock = dish.stock;
+					dishes->menu[i].price = dish.price;
 				}
 				for (i = 0; i < dishes->quantity; i++) {
 					sprintf(aux, "[ADDED] %s (x%d)\n", dishes->menu[i].name, dishes->menu[i].stock);
@@ -392,6 +394,41 @@ void removeDish(int sock, Frame frame, Menu *dishes) {
 	free(dish.name);
 }
 
+void solvePayment(int sock, Frame frame, Menu *dishes) {
+	int money, cost;
+	int i, quantity;
+	char aux[LENGTH];
+
+	money = atoi(frame.data);    // NOLINT
+	destroyFrame(&frame);
+
+	cost = quantity = 0;
+	for (i = 0; i < dishes->quantity; i++) {
+		quantity += dishes->menu[i].stock;
+		cost += dishes->menu[i].stock * dishes->menu[i].price;
+	}
+
+	if(!cost && !quantity){
+		sprintf(aux, "No has demanat res.");
+		frame = createFrame(CODE_PAYMENT, "PAYKO", aux);
+	} else if(money >= cost){
+		sprintf(aux, "%d", money-cost);
+		frame = createFrame(CODE_PAYMENT, "PAYOK", aux);
+		for (i = 0; i < dishes->quantity; i++) {
+			free(dishes->menu[i].name);
+		}
+		free(dishes->menu);
+		dishes->menu = NULL;
+		dishes->quantity = 0;
+	} else {
+		sprintf(aux, "Has excedit el teu pressupost: La comanda és de %d%s i tens %d%s.", cost, MONEDA, money, MONEDA);
+		frame = createFrame(CODE_PAYMENT, "PAYKO", aux);
+	}
+
+	sendFrame(sock, frame);
+	destroyFrame(&frame);
+}
+
 /**
  * Funció dedicada a un únic socket fins que aquest es desconnecti des de Picard. Aquesta funció es crida
  * en un thread deatached per a poder tenir diversos Picards de manera simultània.
@@ -433,6 +470,10 @@ void *attendPetition(void *sock_aux) {
 
 			case CODE_REMOVE:
 				removeDish(sock, frame, &dishes);
+				break;
+
+			case CODE_PAYMENT:
+				solvePayment(sock, frame, &dishes);
 				break;
 
 			default:
@@ -546,6 +587,8 @@ void disconnectPicard(int sock, Frame frame, Menu *dishes) {
 		free(dishes->menu[i].name);
 	}
 	pthread_mutex_unlock(&mutMenu);
+	if(dishes->quantity)
+		free(dishes->menu);
 }
 
 void disconnectFromData() {

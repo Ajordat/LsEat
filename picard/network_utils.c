@@ -61,6 +61,8 @@ char sendFrame(int socket, Frame frame) {
 
 	//Enviament de la trama.
 	result = write(socket, trama, 1 + HEADER_SIZE + 2 + strlen(frame.data));
+	trama[0] += '0';
+	trama[strlen(trama)] = '\n';
 	debug(trama);
 
 	//Alliberament de la trama enviada.
@@ -79,8 +81,6 @@ Frame receiveFrame(int socket) {
 	Frame frame;
 	char length[2];
 	ssize_t resp;
-
-	debug("readFrame()\n");
 
 	//Lectura del camp type. 1 byte.
 	resp = read(socket, &frame.type, sizeof(char));

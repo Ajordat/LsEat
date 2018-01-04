@@ -6,9 +6,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define DEBUG 		1
+#define DEBUG 		0
 #define LENGTH 		100
 #define INT_LENGTH	12
+#define MONEDA		"€"
 
 
 void debug(char *msg);

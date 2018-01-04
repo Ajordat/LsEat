@@ -35,6 +35,9 @@
 #define	HEADER_DEL_DISH			"DEL_ORD"
 #define	HEADER_ORDER_OK			"ORDOK"
 #define	HEADER_ORDER_KO			"ORDKO"
+#define	HEADER_PAYMENT			"PAY"
+#define HEADER_PAYMENT_OK		"PAYOK"
+#define HEADER_PAYMENT_KO		"PAYKO"
 
 #define	MONEDA		"€"
 
@@ -77,11 +80,15 @@ void readConfigFile(char *filename);
 
 char initConnection();
 
-void requestMenu();
+char requestMenu();
 
-void requestDish(Command cmd);
+char requestDish(Command cmd);
 
-void removeDish(Command cmd);
+char removeDish(Command cmd);
+
+char requestPayment();
+
+char recoverConnection();
 
 void controlSigint();
 

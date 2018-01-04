@@ -6,8 +6,8 @@
 #include <stdlib.h>
 
 
-#define LENGTH 100
-#define DEBUG 1
+#define LENGTH	100
+#define DEBUG	0
 
 
 void debug(char *msg);
