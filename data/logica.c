@@ -117,7 +117,7 @@ char disconnectEnterprise(const char *data) {
  *
  * @param sock 	Socket de la connexió amb el client
  */
-void attendPetition(int sock) {        //TODO: Gestionar connexió Enterprise
+void attendPetition(int sock) {
 	Frame frame;
 	char answer = 0;
 
@@ -137,7 +137,7 @@ void attendPetition(int sock) {        //TODO: Gestionar connexió Enterprise
 			free(frame.data);
 			break;
 
-		case CODE_DISCONNECT:
+		case CODE_DISCONNECT:        //TODO: HI HA ALGUN CAS QUE NO ALLIBERA UN ENTERPRISE
 			answer = disconnectEnterprise(frame.data);
 			free(frame.data);
 			frame = createFrame(CODE_DISCONNECT, answer ? "CONOK" : "CONKO", NULL);
@@ -201,7 +201,7 @@ void connectSocket(int sock, Frame frame) {
 	Enterprise ent;
 
 	if (!strcmp(frame.header, HEADER_PIC_DATA_CONNECT)) {
-		name = malloc(sizeof(char) * (strlen(frame.data) + 1));
+		name = malloc(strlen(frame.data) + 1);
 		strcpy(name, frame.data);
 		sprintf(aux, MSG_CONNECT_PIC, name);
 		print(aux);
@@ -222,12 +222,16 @@ void connectSocket(int sock, Frame frame) {
 		print("\n");
 
 		ent = parseEnterprise(frame.data);
-		HEAP_push(&minheap, ent);
+		destroyFrame(&frame);
 
-		free(frame.data);
-		frame = createFrame(CODE_CONNECT, "CONOK", NULL);
+		if (HEAP_find(minheap, ent.port) < 0) {
+			HEAP_push(&minheap, ent);
+			frame = createFrame(CODE_CONNECT, HEADER_DATA_ENT_CON_OK, NULL);
+		} else {
+			frame = createFrame(CODE_CONNECT, HEADER_DATA_ENT_CON_KO, NULL);
+		}
 		sendFrame(sock, frame);
-		free(frame.data);
+		destroyFrame(&frame);
 	}
 }
 
@@ -240,15 +244,14 @@ Frame getEnterpriseConnection() {
 	Enterprise ent;
 	char aux[LENGTH];
 
-	//TODO: Obtenir Enterprise de la PQ
-	//Actualitzar-li el valor i inserir-lo
+
 	if (!HEAP_length(minheap)) {
 		return createFrame(CODE_CONNECT, HEADER_DATA_PIC_CON_KO, NULL);
 	}
 
 	ent = HEAP_pop(&minheap);
 
-	ent.users++;
+//	ent.users++;
 
 	HEAP_push(&minheap, ent);
 	memset(aux, '\0', LENGTH);

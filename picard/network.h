@@ -9,7 +9,7 @@
 
 int sock;
 
-Enterprise enterprise;		//No tinc clar que sigui gaire útil això
+//Enterprise enterprise;		//No tinc clar que sigui gaire útil això
 
 
 char connectEnterprise(char *name, int money);
@@ -20,7 +20,7 @@ Frame establishConnection(char *name);
 
 char sendRequestDish(Command cmd, char *data, Menu *dishes);
 
-char sendRemoveDish(char *data);
+char sendRemoveDish(char *data, Command cmd);
 
 char writeFrame(Frame);
 

@@ -14,7 +14,7 @@ int createClientSocket(char *ip, int port) {
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 
 	if (sock <= 0) {
-		sprintf(aux, "Error a l'establir connexió.\n%s\n", strerror(errno));
+		sprintf(aux, "Error a l'establir connexió. %s\n", strerror(errno));
 		write(STDOUT_FILENO, aux, strlen(aux));
 		return -1;
 	}
@@ -24,7 +24,7 @@ int createClientSocket(char *ip, int port) {
 	addr.sin_addr.s_addr = inet_addr(ip);
 
 	if (connect(sock, (void *) &addr, sizeof(addr)) < 0) {
-		sprintf(aux, "Error a l'establir connexió. 2\n%s\n", strerror(errno));
+		sprintf(aux, "Error a l'establir connexió. %s\n", strerror(errno));
 		write(STDOUT_FILENO, aux, strlen(aux));
 		return -1;
 	}

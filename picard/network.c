@@ -20,7 +20,7 @@ char connectEnterprise(char *name, int money) {
 	data[strlen(data)] = '&';
 	strcat(data, aux);
 
-	frame = createFrame(CODE_CONNECT, "PIC_INF", data);
+	frame = createFrame(CODE_CONNECT, HEADER_INIT_CONN_ENT, data);
 	debugFrame(frame);
 
 	debug("[SENDING]\n");
@@ -36,7 +36,7 @@ char connectEnterprise(char *name, int money) {
 
 	destroyFrame(&frame);
 
-	return (char) strcmp(frame.header, "CONOK");
+	return (char) strcmp(frame.header, HEADER_CONN_OK);
 }
 
 /**
@@ -48,7 +48,7 @@ char connectEnterprise(char *name, int money) {
 Frame establishConnection(char *name) {
 	Frame frame;
 
-	frame = createFrame(CODE_CONNECT, HEADER_INIT_CONN, name);
+	frame = createFrame(CODE_CONNECT, HEADER_INIT_CONN_DATA, name);
 	debugFrame(frame);
 
 	writeFrame(frame);
@@ -87,10 +87,10 @@ char disconnect(char *name) {
 	debugFrame(frame);
 	destroyFrame(&frame);
 
-	if (!strcmp(frame.header, "CONOK"))
-		print("[Desconnecta Enterprise OK]\n");
+	if (!strcmp(frame.header, HEADER_CONN_OK))
+		print(MSG_DISCONN_ENT_OK);
 	else
-		print("[Desconnecta Enterprise KO]\n");
+		print(MSG_DISCONN_ENT_KO);
 	return 1;
 }
 
@@ -114,7 +114,9 @@ char sendRequestDish(Command cmd, char *data, Menu *dishes) {
 
 	if (!strcasecmp(frame.header, HEADER_ORDER_OK)) {
 
-		print(MSG_ORDER_OK " Plat demanat!\n");
+		print(MSG_ORDER_OK);
+		sprintf(aux, " %s (x%d): Plat demanat!\n", cmd.plat, cmd.unitats);
+		print(aux);
 
 		for (i = 0; i < dishes->quantity; i++) {
 			if (!strcasecmp(dishes->menu[i].name, cmd.plat)) {
@@ -139,16 +141,20 @@ char sendRequestDish(Command cmd, char *data, Menu *dishes) {
 			case DATA_DISH_NOT_STOCK:
 				for (i = 0; frame.data[i] != '&'; i++);
 				resp = atoi(frame.data + i + 1);    // NOLINT
-				sprintf(aux, " Només queden %d unitats.\n", resp);
+
+				if (resp)
+					sprintf(aux, " %s (x%d): Només queden %d unitats.\n", cmd.plat, cmd.unitats, resp);
+				else
+					sprintf(aux, " %s (x%d): No queda cap unitat", cmd.plat, cmd.unitats);
 				print(aux);
 				break;
 			case DATA_DISH_NOT_FOUND:
-				print(" No s'ha trobat el plat demanat.\n");
+				sprintf(aux, " No s'ha trobat el plat \"%s\".\n", cmd.plat);
+				print(aux);
 				break;
 			default:
-				print(" Error a la trama. S'ha rebut [");
-				print(frame.data);
-				print("]\n");
+				sprintf(aux, " Error a la trama. S'ha rebut [%s]\n", frame.data);
+				print(aux);
 		}
 	}
 
@@ -156,7 +162,7 @@ char sendRequestDish(Command cmd, char *data, Menu *dishes) {
 	return 1;
 }
 
-char sendRemoveDish(char*data) {
+char sendRemoveDish(char *data, Command cmd) {
 	Frame frame;
 	char aux[LENGTH];
 	int resp;
@@ -174,7 +180,8 @@ char sendRemoveDish(char*data) {
 		return -1;
 
 	if (!strcasecmp(frame.header, HEADER_ORDER_OK)) {
-		print(MSG_ORDER_OK " Plat descartat!\n");
+		sprintf(aux, MSG_ORDER_OK " %s (x%d): Plat descartat!\n", cmd.plat, cmd.unitats);
+		print(aux);
 		destroyFrame(&frame);
 		return 0;
 	}

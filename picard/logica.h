@@ -37,7 +37,7 @@ char removeDish(Command cmd);
 
 char requestPayment();
 
-char recoverConnection();
+char recoverConnection(char connected);
 
 void controlSigint();
 

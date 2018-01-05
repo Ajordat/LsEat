@@ -22,13 +22,15 @@
 #define	HEADER_PIC_DATA_CONNECT		"PIC_NAME"
 #define	HEADER_DATA_PIC_CON_OK		"ENT_INF"
 #define	HEADER_DATA_PIC_CON_KO		"CONKO"
+#define	HEADER_DATA_ENT_CON_OK		"CONOK"
+#define	HEADER_DATA_ENT_CON_KO		"CONKO"
 
 #define MSG_CONEX_ERR	"Error a l'establir connexió.\n"
 
 #define MAX_REQUESTS	128
 #define HEADER_SIZE		10
+#define FRAME_NULL		-1
 
-#define HARDCODED_ENTERPRISE	"Enterprise A&127.0.0.1&8491"
 
 typedef struct {
 	char type;
@@ -42,11 +44,12 @@ int createSocket(char *ip, int port);
 
 void debugFrame(Frame);
 
-void sendFrame(int sock, Frame);
+char sendFrame(int sock, Frame);
 
 Frame readFrame(int sock);
 
 Frame createFrame(char type, char *header, char *data);
 
+void destroyFrame(Frame *frame);
 
 #endif

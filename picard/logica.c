@@ -8,14 +8,12 @@
  * @return 		0 si és correcte. Altrament, 1.
  */
 char checkProgramArguments(int argc) {
-	char aux[LENGTH];
-
 
 	if (argc != 2) {
-		sprintf(aux, "El format de la crida és incorrecte, ha de ser:\n\tpicard <config_file.dat>\n");
-		print(aux);
+		print("El format de la crida és incorrecte, ha de ser:\n\tpicard <config_file.dat>\n");
 		return 1;
 	}
+
 	return 0;
 }
 
@@ -29,8 +27,7 @@ void welcomeMessage() {
 	print(aux);
 	sprintf(aux, "Tens %d%s disponibles\n", config.money, MONEDA);
 	print(aux);
-	sprintf(aux, "Introdueix comandes...\n");
-	print(aux);
+	print("Introdueix comandes...\n");
 }
 
 /**
@@ -71,34 +68,37 @@ void readConfigFile(char *filename) {
  * @param frame 	Trama rebuda des de Data. Conté la informació d'un Enterprise
  * @return 			Retorna la informació de connexió a un Enterprise
  */
-Socket resolveEnterprise(Frame frame) {
+Enterprise resolveEnterprise(Frame frame) {
 	int i, j;
 	char *aux;
-	Socket socket;
+	Enterprise ent;
 
-	for (j = 0; frame.data[j] != '&'; j++);
-	j++;
-
-	socket.ip = malloc(sizeof(char));
-	for (i = 0; frame.data[j] != '&'; j++) {
-		socket.ip[i] = frame.data[j];
-		i++;
-		socket.ip = realloc(socket.ip, (size_t) i + 1);
+	ent.name = malloc(sizeof(char));
+	for (j = 0; frame.data[j] != '&'; j++) {
+		ent.name[j] = frame.data[j];
+		ent.name = realloc(ent.name, (size_t) j + 2);
 	}
-	socket.ip[i] = '\0';
+	ent.name[j] = '\0';
+	j++; //saltem &
+
+	ent.ip = malloc(sizeof(char));
+	for (i = 0; frame.data[j] != '&'; j++, i++) {
+		ent.ip[i] = frame.data[j];
+		ent.ip = realloc(ent.ip, (size_t) i + 2);
+	}
+	ent.ip[i] = '\0';
 	j++; //saltem &
 
 	aux = malloc(sizeof(char));
-	for (i = 0; frame.data[j]; j++) {
+	for (i = 0; frame.data[j]; j++, i++) {
 		aux[i] = frame.data[j];
-		i++;
-		aux = realloc(aux, (size_t) i + 1);
+		aux = realloc(aux, (size_t) i + 2);
 	}
 	aux[i] = '\0';
-	socket.port = atoi(aux); // NOLINT
+	ent.port = atoi(aux); // NOLINT
 	free(aux);
 
-	return socket;
+	return ent;
 }
 
 /**
@@ -108,7 +108,8 @@ Socket resolveEnterprise(Frame frame) {
  * @return 			0 si s'ha pogut iniciar la connexió amb èxit. Altrament, -1
  */
 char tryConnectionEnterprise(Frame frame) {
-	Socket socket;
+	Enterprise ent;
+	char aux[LENGTH];
 
 	debugFrame(frame);
 	close(sock);
@@ -121,23 +122,27 @@ char tryConnectionEnterprise(Frame frame) {
 		return -1;
 	}
 
-	socket = resolveEnterprise(frame);
+	ent = resolveEnterprise(frame);
 
 	debug("[STARTING ENTERPRISE CONNECTION]\n");
-	sock = createClientSocket(socket.ip, socket.port);
-	if (sock < 0) {                //TODO: MILLORAR MISSATGE D'ERROR
+	sock = createClientSocket(ent.ip, ent.port);
+	if (sock < 0) {
 		debug("[FAILURE]\n");
 		print(MSG_CONN_ENT_KO);
-		free(socket.ip);
+		free(ent.ip);
+		free(ent.name);
 		destroyFrame(&frame);
 		return -1;
 	}
 	print(MSG_CONN_ENT_OK);
-	debug("[DONE]\n");
-	free(socket.ip);
+	debug("[EXIT]\n");
+	free(ent.ip);
 	destroyFrame(&frame);
-	connectEnterprise(config.name, config.money);    //HARDCODED
+	connectEnterprise(config.name, config.money);
 	print(MSG_CONN_OK);
+	sprintf(aux, "Benvingut al restaurant %s!\n", ent.name);
+	print(aux);
+	free(ent.name);
 	return 0;
 }
 
@@ -258,6 +263,13 @@ char requestDish(Command cmd) {
 	char aux[LENGTH];
 	char buffer[INT_LENGTH];
 
+
+	if (cmd.unitats <= 0) {
+		sprintf(aux, MSG_ORDER_KO " No pots demanar %d unitats.\n", cmd.unitats);
+		print(aux);
+		return 1;
+	}
+
 	memset(aux, '\0', LENGTH);
 	memcpy(aux, cmd.plat, strlen(cmd.plat));
 
@@ -282,13 +294,19 @@ char removeDish(Command cmd) {
 			break;
 
 	if (i == dishes.quantity) {
-		sprintf(aux, MSG_ORDER_KO "No has demanat el plat %s\n", cmd.plat);
+		sprintf(aux, MSG_ORDER_KO " No has demanat el plat %s\n", cmd.plat);
+		print(aux);
+		return 1;
+	}
+
+	if (!cmd.unitats) {
+		sprintf(aux, MSG_ORDER_KO " No pots eliminar 0 unitats.\n");
 		print(aux);
 		return 1;
 	}
 
 	if (cmd.unitats > dishes.menu[i].stock) {
-		sprintf(aux, MSG_ORDER_KO "Vols eliminar %d unitats i només n'has demanat %d.\n", cmd.unitats,
+		sprintf(aux, MSG_ORDER_KO " Vols eliminar %d unitats i només n'has demanat %d.\n", cmd.unitats,
 				dishes.menu[i].stock);
 		print(aux);
 		return 1;
@@ -303,7 +321,7 @@ char removeDish(Command cmd) {
 	myItoa(cmd.unitats, buffer);
 	strcat(aux, buffer);
 
-	resp = sendRemoveDish(aux);
+	resp = sendRemoveDish(aux, cmd);
 
 	if (!resp)
 		dishes.menu[i].stock -= cmd.unitats;
@@ -351,8 +369,7 @@ char requestPayment() {
 	return 1;
 }
 
-char recoverConnection() {
-	char connected;
+char recoverConnection(char connected) {
 	Frame frame;
 	char aux[LENGTH];
 	char buffer[INT_LENGTH];
@@ -360,7 +377,8 @@ char recoverConnection() {
 
 
 	print(MSG_CONN_RECOVERY);
-	connected = initConnection();
+	if (!connected)
+		connected = initConnection();
 
 	if (!connected)
 		return 0;
@@ -402,14 +420,19 @@ char recoverConnection() {
 			switch (atoi(frame.data)) {    // NOLINT
 				case DATA_DISH_NOT_STOCK:
 					for (j = 0; frame.data[j] != '&'; j++);
+
+					sprintf(aux, " %s (x%d): ", dishes.menu[i].name, dishes.menu[i].stock);
+					print(aux);
+
 					dishes.menu[i].stock = atoi(frame.data + j + 1);    // NOLINT
 
 					if (dishes.menu[i].stock) {
-						sprintf(aux, " Reintentant amb %d unitats.\n", dishes.menu[i].stock);
+						sprintf(aux, "Reintentant amb %d unitat%s.\n", dishes.menu[i].stock,
+								dishes.menu[i].stock == 1 ? "" : "s");
 						print(aux);
 						i--;
 					} else
-						print(" No queda cap unitat.\n");
+						print("No queda cap unitat.\n");
 
 					break;
 				case DATA_DISH_NOT_FOUND:
@@ -417,9 +440,8 @@ char recoverConnection() {
 					dishes.menu[i].stock = 0;
 					break;
 				default:
-					print(" Error a la trama. S'ha rebut [");
-					print(frame.data);
-					print("]\n");
+					sprintf(aux, " Error a la trama. S'ha rebut [%s]\n", frame.data);
+					print(aux);
 			}
 
 		}
@@ -437,7 +459,7 @@ char recoveryHandler(Command cmd, char response) {
 	if (!response) {
 		print(MSG_CONN_LOSS " S'ha perdut la connexió amb el servidor!\n");
 		close(sock);
-		connected = recoverConnection();
+		connected = recoverConnection(NOT_CONNECTED);
 		if (connected) {
 			if (cmd.code == CODE_REMOVE || cmd.code == CODE_REQUEST) {
 				aux = malloc(strlen(cmd.plat) + 1);
@@ -446,13 +468,15 @@ char recoveryHandler(Command cmd, char response) {
 			}
 			menuOptions(cmd);
 		} else
-			print("No s'ha pogut recuperar automàticament la connexió.\n");
+			print(MSG_CONN_LOSS " No s'ha pogut recuperar automàticament la connexió.\n");
 	}
 	return connected;
 }
 
+
 char menuOptions(Command cmd) {
 	static char connected = 0;
+	static char previously = 0;
 	char aux[LENGTH];
 	char resp;
 
@@ -464,13 +488,18 @@ char menuOptions(Command cmd) {
 				break;
 			}
 			connected = initConnection();
+			if (connected && previously) {
+				recoverConnection(CONNECTED);
+				previously = 0;
+			}
 			break;
 
 		case CODE_SHOWMENU:
 			debug("Toca mostrar el menú\n");
-			if (connected)
+			if (connected) {
 				connected = recoveryHandler(cmd, requestMenu());
-			else
+				previously = !connected;
+			} else
 				print(MSG_CMD_KO " Encara no t'has connectat!\n");
 			break;
 
@@ -484,27 +513,30 @@ char menuOptions(Command cmd) {
 
 		case CODE_REQUEST:
 			debug("Toca demanar\n");
-			if (connected)
+			if (connected) {
 				connected = recoveryHandler(cmd, requestDish(cmd));
-			else
+				previously = !connected;
+			} else
 				print(MSG_CMD_KO " Encara no t'has connectat!\n");
 			free(cmd.plat);
 			break;
 
 		case CODE_REMOVE:
 			debug("Toca eliminar\n");
-			if (connected)
+			if (connected) {
 				connected = recoveryHandler(cmd, removeDish(cmd));
-			else
+				previously = !connected;
+			} else
 				print(MSG_CMD_KO " Encara no t'has connectat!\n");
 			free(cmd.plat);
 			break;
 
 		case CODE_PAYMENT:
 			debug("Toca pagar\n");
-			if (connected)
+			if (connected) {
 				connected = recoveryHandler(cmd, requestPayment());
-			else
+				previously = !connected;
+			} else
 				print(MSG_CMD_KO " Encara no t'has connectat!\n");
 			break;
 
@@ -531,7 +563,7 @@ char menuOptions(Command cmd) {
 			break;
 
 		case ERR_N_PARAMS:
-			print(MSG_CMD_KO " Nombre de paràmetres incorrecte\n");
+			print(MSG_CMD_KO " Paràmetres incorrectes\n");
 			break;
 
 		default:

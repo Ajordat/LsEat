@@ -15,12 +15,13 @@ char connectData() {
 	frame = createFrame(CODE_CONNECT, "ENT_INF", aux);
 
 	sendFrame(sock_data, frame);
-	free(frame.data);
+	destroyFrame(&frame);
 
 	frame = readFrame(sock_data);
-	free(frame.data);
+	destroyFrame(&frame);
 
 	close(sock_data);
+	sock_data = -1;
 
 	return !strcmp(frame.header, "CONOK");
 }
@@ -148,37 +149,56 @@ void readMenuFile(char *filename) {
 void *updateInformation() {
 	char aux[LENGTH];
 	Frame frame;
+	char resp;
 
 	while (1) {
 		sleep((uint) config.refresh);
 		debug("[UPDATE]\n");
 		sock_data = createClientSocket(config.ip_data, config.port_data);
 
-		if (sock_data < 0)
-			return NULL;
+		if (sock_data < 0) {
+			print("[UPDATE FAILURE]\n");
+//			return NULL;
+			pthread_exit(NULL);
+		}
+//			return NULL;
 
 		memset(aux, '\0', LENGTH);
 		sprintf(aux, "%d&%d", config.port_picard, nUsers);
 		frame = createFrame(CODE_UPDATE, "UPDATE", aux);
 
 		debugFrame(frame);
-		sendFrame(sock_data, frame);
-		free(frame.data);
+		resp = sendFrame(sock_data, frame);
+		destroyFrame(&frame);
+
+		if (!resp) {
+			close(sock_data);
+			print("[UPDATE FAILURE]\n");
+//			return NULL;
+			pthread_exit(NULL);
+		}
 
 		frame = readFrame(sock_data);
-		debugFrame(frame);
-		free(frame.data);
+		destroyFrame(&frame);
 
 		close(sock_data);
+
+		if (frame.type == FRAME_NULL) {
+			print("[UPDATE FAILURE]\n");
+//			return NULL;
+			pthread_exit(NULL);
+		}
+
+		print("[UPDATE]\n");
+
 	}
-	return NULL;
 }
 
 void updateThread() {
 
 //	fiUpdate = 0;
 	pthread_create(&update, NULL, updateInformation, NULL);
-//	pthread_detach(update);
+	pthread_detach(update);
 
 }
 
@@ -434,7 +454,8 @@ char solvePayment(int sock, Picard *picard, Menu *dishes) {
 		dishes->quantity = 0;
 		picard->money -= cost;
 	} else {
-		sprintf(aux, "Has excedit el teu pressupost: La comanda és de %d%s i tens %d%s.", cost, MONEDA, picard->money, MONEDA);
+		sprintf(aux, "Has excedit el teu pressupost: La comanda és de %d%s i tens %d%s.", cost, MONEDA, picard->money,
+				MONEDA);
 		frame = createFrame(CODE_PAYMENT, "PAYKO", aux);
 	}
 
@@ -485,6 +506,9 @@ void *attendPetition(void *sock_aux) {
 
 	do {
 		frame = readFrame(sock);
+		if (frame.type == FRAME_NULL)
+			break;
+
 		debugFrame(frame);
 		switch (frame.type) {
 
@@ -535,7 +559,6 @@ void *attendPetition(void *sock_aux) {
  * @param frame 	Trama rebuda amb informació sobre el Picard.
  */
 char connectPicard(int sock, Frame frame, Picard *picard) {
-//	Picard picard;        //TODO: Això serà un element d'alguna estructura (llista segurament)
 	char *name, *money;
 	int ref, i;
 	char aux[LENGTH];
@@ -621,6 +644,7 @@ void disconnectPicard(int sock, Frame frame) {
 void disconnectFromData() {
 	char aux[LENGTH];
 	Frame frame;
+	char resp;
 
 	sock_data = createClientSocket(config.ip_data, config.port_data);
 
@@ -632,12 +656,21 @@ void disconnectFromData() {
 	frame = createFrame(CODE_DISCONNECT, "ENT_INF", aux);
 
 	debugFrame(frame);
-	sendFrame(sock_data, frame);
-	free(frame.data);
+	resp = sendFrame(sock_data, frame);
+	destroyFrame(&frame);
+
+	if (!resp) {
+		close(sock_data);
+		sock_data = -1;
+		return;
+	}
 
 	frame = readFrame(sock_data);
 	debugFrame(frame);
-	free(frame.data);
+	destroyFrame(&frame);
+
+	close(sock_data);
+	sock_data = -1;
 }
 
 /**
@@ -651,6 +684,7 @@ void freeResources() {
 	pthread_cancel(update);
 //	pthread_join(update, NULL);
 	pthread_mutex_destroy(&mutUsers);
+	pthread_mutex_destroy(&mutMenu);
 
 	disconnectFromData();
 
@@ -663,10 +697,10 @@ void freeResources() {
 
 	free(menu.menu);
 
-	if (sock_picard > 0)
+	if (sock_picard >= 0)
 		close(sock_picard);
 
-	if (sock_data > 0)
+	if (sock_data >= 0)
 		close(sock_data);
 }
 

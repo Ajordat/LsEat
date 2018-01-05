@@ -29,7 +29,7 @@ char checkNumber(const char *word);
 
 char * readFileDescriptor(int fd);
 
-void myItoa(int num, char *buff);
+int myItoa(int num, char *buff);
 
 
 #endif

@@ -82,9 +82,11 @@ char endOfWord(int index, const char *string) {
  * @return		Retorna 1 si ha tingut èxit i 0 si l'estructura és incorrecta
  */
 char checkNumber(const char *word) {
-	int i;
+	int i = 0;
+
 	if (word[0] == '\0') return 0;
-	for (i = 0; word[i]; i++)
+	if (word[0] == '-')i++;
+	for (; word[i]; i++)
 		if (word[i] < '0' || word[i] > '9')
 			return 0;
 	return 1;
@@ -121,7 +123,7 @@ char *readFileDescriptor(int fd) {
  * @param num 	Número a obtenir en ASCII
  * @param buff 	Cadena amb el resultat
  */
-void myItoa(int num, char *buff) {
+int myItoa(int num, char *buff) {
 	int i, j;
 	char aux;
 
@@ -135,4 +137,5 @@ void myItoa(int num, char *buff) {
 		buff[j] = buff[i - j - 1];
 		buff[i - j - 1] = aux;
 	}
+	return i;
 }

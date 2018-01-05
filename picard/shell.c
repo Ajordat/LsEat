@@ -1,4 +1,5 @@
 #include "shell.h"
+#include "types.h"
 
 
 void initShell() {
@@ -8,7 +9,7 @@ void initShell() {
 }
 
 /**
- * Funció utilitzada per comprovar que no hi ha més arguments dels que hi hauria d'haver a una comanda interna de Picard.
+ * Funció inline utilitzada per comprovar que no hi ha més arguments dels que hi hauria d'haver a una comanda interna de Picard.
  * Si no n'hi ha més retorna el codi rebut, altrament indica un error.
  *
  * @param index 	Index a partir del que s'ha de comprovar si hi ha més arguments
@@ -16,7 +17,7 @@ void initShell() {
  * @param code 		Codi a retornar si el nombre d'arguments és correcte
  * @return 			Retorna el codi rebut com a paràmetre o un error segons la comanda introduïda sigui correcta
  */
-char checkParameters(int index, const char *command, char code) {
+inline char checkParameters(int index, const char *command, char code) {
 	return endOfWord(index, command) ? code : ERR_N_PARAMS;
 }
 
@@ -34,9 +35,11 @@ Command substractCommand(char *command) {
 	char *word;
 	Command cmd;
 
+	cmd.plat = NULL;
+	cmd.code = ERR_UNK_CMD;
+
 	if (command == NULL) {
-		cmd.plat = NULL;
-		cmd.code = ERR_UNK_CMD;
+		print("\n");
 		return cmd;
 	}
 	word = getWord(&i, command);
@@ -80,10 +83,9 @@ Command substractCommand(char *command) {
 				memmove(cmd.plat, command + i, length);
 				cmd.code = CODE_REQUEST;
 			}
-		} else {
+		} else
 			cmd.code = ERR_N_PARAMS;
-			cmd.plat = NULL;
-		}
+
 
 	} else if (!strcasecmp(CMD_REMOVE, word)) {
 
@@ -101,23 +103,19 @@ Command substractCommand(char *command) {
 				memmove(cmd.plat, command + i, length);
 				cmd.code = CODE_REMOVE;
 			}
-		} else {
+		} else
 			cmd.code = ERR_N_PARAMS;
-			cmd.plat = NULL;
-		}
+
 
 	} else if (!strcasecmp(CMD_PAY, word)) {
-
 		cmd.code = checkParameters(i, command, CODE_PAYMENT);
 
 	} else if (!strcasecmp(CMD_DISCONNECT, word)) {
-
 		cmd.code = checkParameters(i, command, CODE_DISCONNECT);
 
 	} else {
 		cmd.plat = malloc(strlen(command) + 1);
 		memcpy(cmd.plat, command, strlen(command) + 1);
-		cmd.code = ERR_UNK_CMD;
 	}
 	free(word);
 	return cmd;
@@ -149,15 +147,17 @@ void appendCommand(Command cmd) {
 			sprintf(history[nLog], "%s %s", CMD_SHOW, CMD_ORDER);
 			break;
 		case CODE_REQUEST:
-			myItoa(cmd.unitats, aux);
-			length = strlen(CMD_REQUEST) + 1 + strlen(aux) + 1 + strlen(cmd.plat) + 1;
+			myItoa(cmd.unitats * (cmd.unitats < 0 ? -1 : 1), aux);
+			length = strlen(CMD_REQUEST) + 1 + (!cmd.unitats) + (strlen(aux)) + (cmd.unitats < 0) + 1 +
+					 strlen(cmd.plat) + 1;
 			history[nLog] = malloc(length);
 			memset(history[nLog], '\0', length);    //Aquest length era length-1
 			sprintf(history[nLog], "%s %d %s", CMD_REQUEST, cmd.unitats, cmd.plat);
 			break;
 		case CODE_REMOVE:
-			myItoa(cmd.unitats, aux);
-			length = strlen(CMD_REMOVE) + 1 + strlen(aux) + 1 + strlen(cmd.plat) + 1;
+			myItoa(cmd.unitats * (cmd.unitats < 0 ? -1 : 1), aux);
+			length = strlen(CMD_REQUEST) + 1 + (!cmd.unitats) + (strlen(aux)) + (cmd.unitats < 0) + 1 +
+					 strlen(cmd.plat) + 1;
 			history[nLog] = malloc(length);
 			memset(history[nLog], '\0', length);    //Aquest length era length-2
 			sprintf(history[nLog], "%s %d %s", CMD_REMOVE, cmd.unitats, cmd.plat);

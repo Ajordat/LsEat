@@ -42,6 +42,8 @@ void HEAP_close(MinHeap *);
 
 char HEAP_update(MinHeap *heap, int port, int users);
 
+int HEAP_find(MinHeap heap, int port);
+
 char HEAP_disconnect(MinHeap *heap, int port);
 
 

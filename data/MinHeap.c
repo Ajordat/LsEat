@@ -94,12 +94,12 @@ char HEAP_remove(MinHeap *heap, int index, int ffree) {
 	}
 
 	heap->length--;
-	if(ffree){
+	if (ffree) {
 		free(heap->nodes[index].e.ip);
 		free(heap->nodes[index].e.name);
 	}
 
-	if(heap->length > 0){
+	if (heap->length > 0) {
 		heap->nodes[index] = heap->nodes[heap->length];
 
 		pushDown(heap, index);
@@ -117,10 +117,10 @@ char HEAP_update(MinHeap *heap, int port, int users) {
 	int i = 0;
 	Enterprise e;
 
-	for (; heap->length; i++) {
+	for (; i < heap->length; i++) {
 		if (heap->nodes[i].e.port == port) {
 			e = heap->nodes[i].e;
-			if(e.users != users){
+			if (e.users != users) {
 				HEAP_remove(heap, i, NO_FREE);
 				e.users = users;
 				HEAP_push(heap, e);
@@ -131,9 +131,21 @@ char HEAP_update(MinHeap *heap, int port, int users) {
 	return 0;
 }
 
+int HEAP_find(MinHeap heap, int port) {
+	int i = 0;
+
+	for (; i < heap.length; i++) {
+		if (heap.nodes[i].e.port == port) {
+			return i;
+		}
+	}
+	return -1;
+}
+
 char HEAP_disconnect(MinHeap *heap, int port) {
 	int i = 0;
 
+//	for (; i < heap->length; i++) {
 	for (; heap->length; i++) {
 		if (heap->nodes[i].e.port == port) {
 			HEAP_remove(heap, i, FREE);

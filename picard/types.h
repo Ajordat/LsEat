@@ -32,6 +32,8 @@
 #define	MSG_CONN_DATA_KO		ANSI_COLOR_RED "[Connexió amb Data KO]\n" ANSI_COLOR_RESET
 #define	MSG_CONN_ENT_OK			ANSI_COLOR_CYAN "[Connexió amb Enterprise OK]\n" ANSI_COLOR_RESET
 #define	MSG_CONN_ENT_KO			ANSI_COLOR_RED "[Connexió amb Enterprise KO]\n" ANSI_COLOR_RESET
+#define	MSG_DISCONN_ENT_OK		ANSI_COLOR_CYAN "[Desconnecta Enterprise OK]\n" ANSI_COLOR_RESET
+#define	MSG_DISCONN_ENT_KO		ANSI_COLOR_RED "[Desconnecta Enterprise KO]\n" ANSI_COLOR_RESET
 #define	MSG_CONN_OK				"Connexió realitzada!\n"
 #define MSG_CONN_LOSS			ANSI_COLOR_RED "[Comanda KO]" ANSI_COLOR_RESET
 #define	MSG_CMD_KO				ANSI_COLOR_RED "[Comanda KO]" ANSI_COLOR_RESET
@@ -52,7 +54,10 @@
 #define CODE_PAYMENT		(char)  0x06
 #define CODE_SHOWORDER		(char)	0x07
 
-#define	HEADER_INIT_CONN		"PIC_NAME"
+#define	HEADER_INIT_CONN_DATA	"PIC_NAME"
+#define	HEADER_INIT_CONN_ENT	"PIC_INF"
+#define	HEADER_CONN_OK			"CONOK"
+#define	HEADER_CONN_KO			"CONKO"
 #define	HEADER_END_CONN			"PIC_NAME"
 #define	HEADER_PIC_DATA_OK		"ENT_INF"
 #define	HEADER_MENU_REQ			"SHW_MENU"
@@ -67,6 +72,9 @@
 
 #define DATA_DISH_NOT_STOCK		1
 #define DATA_DISH_NOT_FOUND		2
+
+#define CONNECTED		1
+#define	NOT_CONNECTED	0
 
 
 typedef struct {
@@ -86,11 +94,6 @@ typedef struct {
 	char *ip;
 	int port;
 } Enterprise;
-
-typedef struct {
-	char *ip;
-	int port;
-} Socket;
 
 typedef struct {
 	char *name;
