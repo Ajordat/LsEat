@@ -18,6 +18,10 @@
 
 #define SHELL_LENGTH	70
 
+#define	DISCONNECT	0
+#define	SIGNAL		1
+
+
 int nLog;
 int indexLog;
 struct termios old;
@@ -31,7 +35,7 @@ void appendCommand(Command);
 
 char solveCommand(char *command);
 
-void freeHistory();
+void freeHistory(int reason);
 
 void printHistory();
 

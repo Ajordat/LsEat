@@ -1,4 +1,5 @@
 #include "logica.h"
+#include "shell.h"
 
 /**
  * Funció per comprovar que el nombre d'arguments sigui correcte.
@@ -112,29 +113,31 @@ char tryConnectionEnterprise(Frame frame) {
 	debugFrame(frame);
 	close(sock);
 
-	debug("[STARTING ENTERPRISE CONNECTION]\n");
+	print(MSG_CONN_DATA_OK);
+
 	if (strcmp(frame.header, HEADER_PIC_DATA_OK)) { // NOLINT
-		print(MSG_PIC_ENT_KO);
+		print(MSG_CONN_ENT_KO);
 		destroyFrame(&frame);
 		return -1;
 	}
-	print(MSG_PIC_DATA_OK);
+
 	socket = resolveEnterprise(frame);
 
+	debug("[STARTING ENTERPRISE CONNECTION]\n");
 	sock = createClientSocket(socket.ip, socket.port);
 	if (sock < 0) {                //TODO: MILLORAR MISSATGE D'ERROR
 		debug("[FAILURE]\n");
-		print(MSG_PIC_ENT_KO);
+		print(MSG_CONN_ENT_KO);
 		free(socket.ip);
 		destroyFrame(&frame);
 		return -1;
 	}
-	print(MSG_PIC_ENT_OK);
+	print(MSG_CONN_ENT_OK);
 	debug("[DONE]\n");
 	free(socket.ip);
 	destroyFrame(&frame);
 	connectEnterprise(config.name, config.money);    //HARDCODED
-	print(MSG_CONEX_OK);
+	print(MSG_CONN_OK);
 	return 0;
 }
 
@@ -147,13 +150,17 @@ char tryConnectionEnterprise(Frame frame) {
 char initConnection() {
 	Frame frame;
 
-	print("Connectant amb LsEat...\n");
+	print(MSG_INIT_CONN);
 	sock = createClientSocket(config.ip, config.port);
 	if (sock < 0) {
-		print(MSG_PIC_DATA_KO);
+		print(MSG_CONN_DATA_KO);
 		return 0;
 	}
 	frame = establishConnection(config.name);
+	if (frame.type == FRAME_NULL) {
+		destroyFrame(&frame);
+		return 0;
+	}
 	return (tryConnectionEnterprise(frame) >= 0);
 }
 
@@ -188,7 +195,7 @@ char requestMenu() {
 	Frame frame;
 	Dish dish;
 	char aux[LENGTH];
-	int resp;
+	int resp, header = 0;
 
 	frame = createFrame(CODE_SHOWMENU, HEADER_MENU_REQ, NULL);
 	resp = writeFrame(frame);
@@ -198,16 +205,25 @@ char requestMenu() {
 		return 0;
 
 	while (1) {
-		frame = readFrame();    //TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
+		frame = readFrame();
 
-		if (frame.type == FRAME_NULL)
+		if (frame.type == FRAME_NULL) {
 			return 0;
+		}
 
-		if (!strcmp(frame.header, HEADER_MENU_END)) break;
+		if (!strcmp(frame.header, HEADER_MENU_END)) {
+			if (!header)
+				print(MSG_MENU_KO);
+			break;
+		}
 
 		dish = parseDish(frame.data);
 
 		if (dish.stock > 0) {
+			if (!header) {
+				header = 1;
+				print(MSG_MENU_OK);
+			}
 			sprintf(aux, "%s (x%d) --- %d%s\n", dish.name, dish.stock, dish.price, MONEDA);
 			print(aux);
 		}
@@ -215,15 +231,32 @@ char requestMenu() {
 		free(dish.name);
 	}
 	destroyFrame(&frame);
+
 	return 1;
 }
 
+void showOrder() {
+	int i, header;
+	char aux[LENGTH];
+
+	for (i = 0, header = 0; i < dishes.quantity; i++) {
+		if (dishes.menu[i].stock) {
+			if (!header) {
+				header = 1;
+				print(MSG_SHOW_ORDER_OK);
+			}
+			sprintf(aux, "%s (x%d)\n", dishes.menu[i].name, dishes.menu[i].stock);
+			print(aux);
+		}
+	}
+
+	if (!header)
+		print(MSG_SHOW_ORDER_KO);
+}
+
 char requestDish(Command cmd) {
-	Frame frame;
 	char aux[LENGTH];
 	char buffer[INT_LENGTH];
-	int i, resp;
-	size_t length;
 
 	memset(aux, '\0', LENGTH);
 	memcpy(aux, cmd.plat, strlen(cmd.plat));
@@ -234,52 +267,14 @@ char requestDish(Command cmd) {
 	myItoa(cmd.unitats, buffer);
 	strcat(aux, buffer);
 
-	frame = createFrame(CODE_REQUEST, HEADER_REQ_DISH, aux);
-	resp = writeFrame(frame);
-	destroyFrame(&frame);
-
-	if (!resp)
-		return 0;
-
-	frame = readFrame();
-
-	if (frame.type == FRAME_NULL)
-		return 0;
-
-	if (!strcasecmp(frame.header, HEADER_ORDER_OK)) {
-		memset(aux, '\0', LENGTH);
-		sprintf(aux, "Comanda acceptada!\n");
-		print(aux);
-		for (i = 0; i < dishes.quantity; i++) {
-			if (!strcasecmp(dishes.menu[i].name, cmd.plat)) {
-				dishes.menu[i].stock += cmd.unitats;
-				break;
-			}
-		}
-		if (i == dishes.quantity) {
-			dishes.quantity++;
-			dishes.menu = realloc(dishes.menu, sizeof(Dish) * dishes.quantity);
-			length = strlen(cmd.plat) + 1;
-			dishes.menu[i].name = malloc(length);
-			memcpy(dishes.menu[i].name, cmd.plat, length);
-			dishes.menu[i].stock = cmd.unitats;
-		}
-
-	} else if (!strcasecmp(frame.header, HEADER_ORDER_KO)) {
-		memset(aux, '\0', LENGTH);
-		sprintf(aux, "Comanda rebutjada.\n%s\n", frame.data);
-		print(aux);
-	}
-
-	destroyFrame(&frame);
-	return 1;
+	return sendRequestDish(cmd, aux, &dishes);
 }
 
 char removeDish(Command cmd) {
-	Frame frame;
 	char aux[LENGTH];
 	char buffer[INT_LENGTH];
-	int i, resp;
+	int i;
+	char resp;
 
 
 	for (i = 0; i < dishes.quantity; i++)
@@ -287,15 +282,16 @@ char removeDish(Command cmd) {
 			break;
 
 	if (i == dishes.quantity) {
-		sprintf(aux, "No has demanat el plat %s\n", cmd.plat);
+		sprintf(aux, MSG_ORDER_KO "No has demanat el plat %s\n", cmd.plat);
 		print(aux);
-		return 0;
+		return 1;
 	}
 
 	if (cmd.unitats > dishes.menu[i].stock) {
-		sprintf(aux, "Vols eliminar %d unitats i només n'has demanat %d.\n", cmd.unitats, dishes.menu[i].stock);
+		sprintf(aux, MSG_ORDER_KO "Vols eliminar %d unitats i només n'has demanat %d.\n", cmd.unitats,
+				dishes.menu[i].stock);
 		print(aux);
-		return 0;
+		return 1;
 	}
 
 	memset(aux, '\0', LENGTH);
@@ -307,45 +303,21 @@ char removeDish(Command cmd) {
 	myItoa(cmd.unitats, buffer);
 	strcat(aux, buffer);
 
-	frame = createFrame(CODE_REMOVE, HEADER_DEL_DISH, aux);
-	resp = writeFrame(frame);
-	destroyFrame(&frame);
+	resp = sendRemoveDish(aux);
 
 	if (!resp)
-		return 0;
-
-	frame = readFrame();    //TODO: CONTROLAR UNA CAIGUDA D'ENTERPRISE
-
-	if (frame.type == FRAME_NULL)
-		return 0;
-
-	if (!strcasecmp(frame.header, HEADER_ORDER_OK)) {
-		memset(aux, '\0', LENGTH);
-		sprintf(aux, "Comanda acceptada!\n");
-		print(aux);
-
 		dishes.menu[i].stock -= cmd.unitats;
 
-	} else if (!strcasecmp(frame.header, HEADER_ORDER_KO)) {
-		memset(aux, '\0', LENGTH);
-		sprintf(aux, "Comanda rebutjada.\n%s\n", frame.data);
-		print(aux);
-	}
+	return (char) (resp + 1);
 
-	destroyFrame(&frame);
-	return 1;
 }
 
 char requestPayment() {
 	Frame frame;
 	char aux[LENGTH];
-	char buffer[INT_LENGTH];
 	int i, resp;
 
-	memset(buffer, '\0', INT_LENGTH);
-	myItoa(config.money, buffer);
-
-	frame = createFrame(CODE_PAYMENT, HEADER_PAYMENT, buffer);
+	frame = createFrame(CODE_PAYMENT, HEADER_PAYMENT, NULL);
 
 	resp = writeFrame(frame);
 	destroyFrame(&frame);
@@ -359,18 +331,19 @@ char requestPayment() {
 		return 0;
 
 	if (!strcasecmp(frame.header, HEADER_PAYMENT_OK)) {
-		config.money = atoi(frame.data);    // NOLINT
+		config.money -= atoi(frame.data);    // NOLINT
 		memset(aux, '\0', LENGTH);
-		sprintf(aux, "Pagament acceptat!\nEt queden %d%s\n", config.money, MONEDA);
+		sprintf(aux, MSG_PAYMENT_OK " Et queden %d%s\n", config.money, MONEDA);
 		print(aux);
-		for (i = 0; i < dishes.quantity; i++){
+		for (i = 0; i < dishes.quantity; i++) {
 			free(dishes.menu[i].name);
 		}
 		free(dishes.menu);
+		dishes.menu = NULL;
 		dishes.quantity = 0;
 	} else if (!strcasecmp(frame.header, HEADER_PAYMENT_KO)) {
 		memset(aux, '\0', LENGTH);
-		sprintf(aux, "Pagament rebutjat.\n%s\n", frame.data);
+		sprintf(aux, MSG_PAYMENT_KO " %s\n", frame.data);
 		print(aux);
 	}
 
@@ -378,23 +351,24 @@ char requestPayment() {
 	return 1;
 }
 
-char recoverConnection(){
+char recoverConnection() {
 	char connected;
 	Frame frame;
 	char aux[LENGTH];
 	char buffer[INT_LENGTH];
-	int i, resp;
+	int i, j, resp;
 
 
-	print("Iniciant recuperació automàtica...\n");
+	print(MSG_CONN_RECOVERY);
 	connected = initConnection();
 
-	if(!connected){
-		print("No s'ha pogut recuperar automàticament la connexió.\n");
+	if (!connected)
 		return 0;
-	}
 
-	for(i = 0; i < dishes.quantity; i++){
+	for (i = 0; i < dishes.quantity; i++) {
+
+		if (!dishes.menu[i].stock)
+			continue;
 
 		memset(aux, '\0', LENGTH);
 		memcpy(aux, dishes.menu[i].name, strlen(dishes.menu[i].name));
@@ -419,20 +393,154 @@ char recoverConnection(){
 
 		if (!strcasecmp(frame.header, HEADER_ORDER_OK)) {
 			memset(aux, '\0', LENGTH);
-			sprintf(aux, "Comanda acceptada!\n");
+			sprintf(aux, MSG_ORDER_OK " %s (x%d)\n", dishes.menu[i].name, dishes.menu[i].stock);
 			print(aux);
 
 		} else if (!strcasecmp(frame.header, HEADER_ORDER_KO)) {
-			memset(aux, '\0', LENGTH);
-			sprintf(aux, "Comanda rebutjada. %s\n", frame.data);
-			print(aux);
-			dishes.menu[i].stock = 0;
+			print(MSG_ORDER_KO);
+
+			switch (atoi(frame.data)) {    // NOLINT
+				case DATA_DISH_NOT_STOCK:
+					for (j = 0; frame.data[j] != '&'; j++);
+					dishes.menu[i].stock = atoi(frame.data + j + 1);    // NOLINT
+
+					if (dishes.menu[i].stock) {
+						sprintf(aux, " Reintentant amb %d unitats.\n", dishes.menu[i].stock);
+						print(aux);
+						i--;
+					} else
+						print(" No queda cap unitat.\n");
+
+					break;
+				case DATA_DISH_NOT_FOUND:
+					print(" No s'ha trobat el plat demanat.\n");
+					dishes.menu[i].stock = 0;
+					break;
+				default:
+					print(" Error a la trama. S'ha rebut [");
+					print(frame.data);
+					print("]\n");
+			}
+
 		}
 
 		destroyFrame(&frame);
 	}
 
 	return connected;
+}
+
+char recoveryHandler(Command cmd, char response) {
+	char connected = 1;
+	char *aux;
+
+	if (!response) {
+		print(MSG_CONN_LOSS " S'ha perdut la connexió amb el servidor!\n");
+		close(sock);
+		connected = recoverConnection();
+		if (connected) {
+			if (cmd.code == CODE_REMOVE || cmd.code == CODE_REQUEST) {
+				aux = malloc(strlen(cmd.plat) + 1);
+				memcpy(aux, cmd.plat, strlen(cmd.plat) + 1);
+				cmd.plat = aux;
+			}
+			menuOptions(cmd);
+		} else
+			print("No s'ha pogut recuperar automàticament la connexió.\n");
+	}
+	return connected;
+}
+
+char menuOptions(Command cmd) {
+	static char connected = 0;
+	char aux[LENGTH];
+	char resp;
+
+	switch (cmd.code) {
+		case CODE_CONNECT:
+			debug("Toca connectar\n");
+			if (connected) {
+				print(MSG_CMD_KO " Ja estàs connectat a un Enterprise!\n");
+				break;
+			}
+			connected = initConnection();
+			break;
+
+		case CODE_SHOWMENU:
+			debug("Toca mostrar el menú\n");
+			if (connected)
+				connected = recoveryHandler(cmd, requestMenu());
+			else
+				print(MSG_CMD_KO " Encara no t'has connectat!\n");
+			break;
+
+		case CODE_SHOWORDER:
+			debug("Toca mostrar la comanda\n");
+			if (connected)
+				showOrder();
+			else
+				print(MSG_CMD_KO " Encara no t'has connectat!\n");
+			break;
+
+		case CODE_REQUEST:
+			debug("Toca demanar\n");
+			if (connected)
+				connected = recoveryHandler(cmd, requestDish(cmd));
+			else
+				print(MSG_CMD_KO " Encara no t'has connectat!\n");
+			free(cmd.plat);
+			break;
+
+		case CODE_REMOVE:
+			debug("Toca eliminar\n");
+			if (connected)
+				connected = recoveryHandler(cmd, removeDish(cmd));
+			else
+				print(MSG_CMD_KO " Encara no t'has connectat!\n");
+			free(cmd.plat);
+			break;
+
+		case CODE_PAYMENT:
+			debug("Toca pagar\n");
+			if (connected)
+				connected = recoveryHandler(cmd, requestPayment());
+			else
+				print(MSG_CMD_KO " Encara no t'has connectat!\n");
+			break;
+
+		case CODE_DISCONNECT:
+			debug("Toca desconnectar\n");
+			if (connected) {
+				resp = disconnect(config.name);
+				close(sock);
+				if (!resp)
+					print(MSG_CONN_LOSS " S'ha perdut la connexió amb el servidor!\n");
+			} else
+				print("Encara no t'havies connectat!\n");
+
+			freeResources();
+			freeHistory(DISCONNECT);
+			return 1;
+
+		case ERR_UNK_CMD:
+			print(MSG_CONN_LOSS " Comanda no reconeguda");
+			sprintf(aux, " -> [%s]", history[nLog - 1]);
+			debug(aux);
+			print("\n");
+			free(cmd.plat);
+			break;
+
+		case ERR_N_PARAMS:
+			print(MSG_CMD_KO " Nombre de paràmetres incorrecte\n");
+			break;
+
+		default:
+			print(MSG_CMD_KO " Comanda no reconeguda\n");
+			break;
+
+	}
+
+	return 0;
 }
 
 /**
@@ -448,6 +556,7 @@ void freeResources() {
 	for (i = 0; i < dishes.quantity; i++) {
 		free(dishes.menu[i].name);
 	}
-	free(dishes.menu);
+	if (dishes.quantity)
+		free(dishes.menu);
 }
 

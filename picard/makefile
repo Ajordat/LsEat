@@ -5,10 +5,12 @@ FASE = 3
 CFLAGS = -Wall -Wextra -g
 MAIN = main.c
 MODULES = logica shell utils network network_utils
+LIBS = types.h
 EXE = picard
 
 FILES = $(MAIN) $(patsubst %,%.c, $(MODULES))
-HEADERS = $(patsubst %,%.h, $(MODULES))
+HEADERS = $(LIBS) $(patsubst %,%.h, $(MODULES))
+
 
 all: $(FILES) $(HEADERS)
 	gcc $(FILES) $(CFLAGS) -o $(EXE)

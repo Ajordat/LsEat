@@ -20,17 +20,21 @@
 #define CODE_SHOWMENU	(char)	0x03
 #define CODE_REQUEST	(char)	0x04
 #define CODE_REMOVE		(char)	0x05
-#define CODE_PAYMENT		(char)	0x06
+#define CODE_PAYMENT	(char)	0x06
 #define CODE_UPDATE		(char)	0x07
 
 #define	HEADER_PIC_ENT_CONN_OK	"CONOK"
 #define	HEADER_PIC_ENT_DISC_OK	"CONOK"
+
+#define DATA_DISH_NOT_STOCK		1
+#define DATA_DISH_NOT_FOUND		"2"
 
 #define MSG_CONEX_ERR	"Error a l'establir connexió.\n"
 
 #define LENGTH			100
 #define MAX_REQUESTS	128
 #define HEADER_SIZE		10
+#define FRAME_NULL		(-1)
 
 
 typedef struct {
@@ -41,19 +45,22 @@ typedef struct {
 } Frame;
 
 
-int createClientSocket(char *ip, int port);
-
-int createServerSocket(char *ip, int port);
-
 void debugFrame(Frame);
 
-void sendFrame(int sock, Frame);
+char sendFrame(int sock, Frame);
 
 Frame readFrame(int sock);
 
 Frame createFrame(char type, char *header, char *data);
 
 void destroyFrame(Frame *);
+
+
+int createClientSocket(char *ip, int port);
+
+int createServerSocket(char *ip, int port);
+
+
 
 
 #endif

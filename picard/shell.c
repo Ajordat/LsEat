@@ -52,6 +52,10 @@ Command substractCommand(char *command) {
 
 		if (!strcasecmp(CMD_MENU, word)) {
 			cmd.code = checkParameters(i, command, CODE_SHOWMENU);
+
+		} else if (!strcasecmp(CMD_ORDER, word)) {
+			cmd.code = checkParameters(i, command, CODE_SHOWORDER);
+
 		} else {
 			cmd.code = ERR_UNK_CMD;
 			cmd.plat = malloc((size_t) strlen(command) + 1);
@@ -63,6 +67,7 @@ Command substractCommand(char *command) {
 
 		free(word);
 		word = getWord(&i, command);
+
 		if (checkNumber(word)) {
 			cmd.unitats = atoi(word);  // NOLINT
 			while (command[i] == ' ' || command[i] == '\t') i++;
@@ -86,17 +91,19 @@ Command substractCommand(char *command) {
 		word = getWord(&i, command);
 		if (checkNumber(word)) {
 			cmd.unitats = atoi(word); // NOLINT
-			cmd.plat = getWord(&i, command);
-			if (cmd.plat[0] == '\0') {
+			while (command[i] == ' ' || command[i] == '\t') i++;
+			if (endOfWord(i, command)) {
 				cmd.code = ERR_N_PARAMS;
 				free(cmd.plat);
 			} else {
-				cmd.code = checkParameters(i, command, CODE_REMOVE);
-				if (cmd.code != CODE_REMOVE)
-					free(cmd.plat);
+				length = strlen(command) - i + 1;
+				cmd.plat = malloc(length);
+				memmove(cmd.plat, command + i, length);
+				cmd.code = CODE_REMOVE;
 			}
 		} else {
 			cmd.code = ERR_N_PARAMS;
+			cmd.plat = NULL;
 		}
 
 	} else if (!strcasecmp(CMD_PAY, word)) {
@@ -134,6 +141,12 @@ void appendCommand(Command cmd) {
 			history[nLog] = malloc(length);
 			memset(history[nLog], '\0', length);
 			sprintf(history[nLog], "%s %s", CMD_SHOW, CMD_MENU);
+			break;
+		case CODE_SHOWORDER:
+			length = strlen(CMD_SHOW) + 1 + strlen(CMD_ORDER) + 1;
+			history[nLog] = malloc(length);
+			memset(history[nLog], '\0', length);
+			sprintf(history[nLog], "%s %s", CMD_SHOW, CMD_ORDER);
 			break;
 		case CODE_REQUEST:
 			myItoa(cmd.unitats, aux);
@@ -308,118 +321,13 @@ char *readCommand() {
  */
 char solveCommand(char *command) {
 	Command cmd;
-	static char connected = 0;
-	char aux[LENGTH];
-	char resp;
 
 	cmd = substractCommand(command);
 
 	if (command != NULL)
 		appendCommand(cmd);
 
-	switch (cmd.code) {
-		case CODE_CONNECT:
-			debug("Toca connectar\n");
-			if (connected) {
-				print("Ja estàs connectat a un Enterprise!\n");
-				break;
-			}
-			connected = initConnection();
-			break;
-
-		case CODE_SHOWMENU:
-			debug("Toca mostrar el menú\n");
-			if (connected) {
-				print("[Comanda OK]\n");
-				resp = requestMenu();
-				if(!resp){
-					print("S'ha perdut la connexió amb el servidor!\n");
-					close(sock);
-					connected = recoverConnection();	//TODO: RECUPERAR CONNEXIÓ
-//					if (connected)
-//						solveCommand(command);
-				}
-			} else
-				print("[Comanda KO] Encara no t'has connectat!\n");
-			break;
-
-		case CODE_REQUEST:
-			debug("Toca demanar\n");
-			if (connected) {
-				print("[Comanda OK]\n");
-				resp = requestDish(cmd);
-				if(!resp){
-					print("S'ha perdut la connexió amb el servidor!\n");
-					close(sock);
-					connected = 0;	//TODO: RECUPERAR CONNEXIÓ
-				}
-			} else
-				print("[Comanda KO] Encara no t'has connectat!\n");
-			free(cmd.plat);
-			break;
-
-		case CODE_REMOVE:
-			debug("Toca eliminar\n");
-			if (connected) {
-				print("[Comanda OK]\n");
-				resp = removeDish(cmd);
-				if(!resp){
-					print("S'ha perdut la connexió amb el servidor!\n");
-					close(sock);
-					connected = 0;	//TODO: RECUPERAR CONNEXIÓ
-				}
-			} else
-				print("[Comanda KO] Encara no t'has connectat!\n");
-			free(cmd.plat);
-			break;
-
-		case CODE_PAYMENT:
-			debug("Toca pagar\n");
-			if (connected) {
-				print("[Comanda OK]\n");
-				resp = requestPayment();
-				if(!resp){
-					print("S'ha perdut la connexió amb el servidor!\n");
-					close(sock);
-					connected = 0;	//TODO: RECUPERAR CONNEXIÓ
-				}
-			} else
-				print("[Comanda KO] Encara no t'has connectat!\n");
-			break;
-
-		case CODE_DISCONNECT:
-			debug("Toca desconnectar\n");
-			if (connected) {
-				resp = disconnect(config.name);
-				close(sock);
-				if (!resp)
-					print("S'ha perdut la connexió amb el servidor!\n");
-			} else
-				print("Encara no t'havies connectat!\n");
-
-			freeResources();
-			freeHistory();
-			return 1;
-
-		case ERR_UNK_CMD:
-			print("Comanda no reconeguda");
-			sprintf(aux, " -> [%s]", history[nLog - 1]);
-			debug(aux);
-			print("\n");
-			free(cmd.plat);
-			break;
-
-		case ERR_N_PARAMS:
-			print("Nombre de paràmetres incorrecte\n");
-			break;
-
-		default:
-			print("Comanda no reconeguda\n");
-			break;
-
-	}
-
-	return 0;
+	return menuOptions(cmd);
 }
 
 /**
@@ -431,8 +339,9 @@ void shell() {
 
 	initShell();
 	do {
+		print(ANSI_COLOR_GREEN);
 		print(config.name);
-		print("> ");
+		print("> "ANSI_COLOR_RESET);
 		command = readCommand();
 
 		flag = solveCommand(command);
@@ -450,12 +359,28 @@ void printHistory() {
 	}
 }
 
-void freeHistory() {
-	int i = 0;
+void freeHistory(int reason) {
 
-	for (; i < nLog; i++) {
-		free(history[i]);
-	}
+	nLog += reason;
+
+	while (nLog--)
+		free(history[nLog]);
+
 	free(history);
 	tcsetattr(STDIN_FILENO, TCSANOW, &old);
+}
+
+
+/**
+ * Funció per a capturar el signal SIGINT i alliberar els recursos abans d'aturar l'execució.
+ */
+void controlSigint() {
+	debug("\nSIGINT REBUT");
+	if (sock > 0) {
+		disconnect(config.name);
+		close(sock);
+	}
+	freeResources();
+	freeHistory(SIGNAL);
+	exit(EXIT_SUCCESS);
 }

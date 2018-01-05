@@ -68,6 +68,7 @@ int createServerSocket(char *ip, int port) {
 	return sock;
 }
 
+
 /**
  * Funció per mostrar el contingut d'una trama. Només mostra l'output si DEBUG és diferent a 0.
  *
@@ -85,32 +86,37 @@ void debugFrame(Frame frame) {
  * @param sock 		Socket de connexió amb el client.
  * @param frame 	Trama a enviar
  */
-void sendFrame(int sock, Frame frame) {
+char sendFrame(int sock, Frame frame) {
 	char *trama;
+	ssize_t result;
 
 	//Petició de memòria per la trama a enviar. La seva mida és la suma de les mides dels diferents camps.
-	trama = malloc((size_t) 1 + HEADER_SIZE + 2 + strlen(frame.data) + 1);
-	memset(trama, '\0', (size_t) 1 + HEADER_SIZE + 2 + strlen(frame.data) + 1);
+	trama = malloc(1 + HEADER_SIZE + 2 + strlen(frame.data) + 1);
+	memset(trama, '\0', 1 + HEADER_SIZE + 2 + strlen(frame.data) + 1);
 
 	//Escriptura del camp type. 1 byte.
 	trama[0] = frame.type;
 
 	//Escriptura del camp header. 10 bytes.
-	memcpy(trama + sizeof(char), frame.header, HEADER_SIZE);
+	memcpy(trama + 1, frame.header, HEADER_SIZE);
 
 	//Escriptura del camp length. 2 bytes.
 	trama[HEADER_SIZE + 1] = (char) (((frame.length >> 8)) & 0x00FF);
 	trama[HEADER_SIZE + 2] = (char) (frame.length & 0x00FF);
 
 	//Escriptura de la informació de la trama. Mida variable segons el camp length.
-	memcpy(trama + (HEADER_SIZE + 3), frame.data, strlen(frame.data) + 1);
+	memcpy(trama + HEADER_SIZE + 3, frame.data, strlen(frame.data) + 1);
 
 	//Enviament de la trama.
-	write(sock, trama, 1 + HEADER_SIZE + 2 + strlen(frame.data));
+	result = write(sock, trama, 1 + HEADER_SIZE + 2 + strlen(frame.data));
+	trama[0] += '0';
+	trama[strlen(trama)] = '\n';
 	debug(trama);
 
 	//Alliberament de la trama enviada.
 	free(trama);
+
+	return result > 0;
 }
 
 /**
@@ -122,18 +128,22 @@ void sendFrame(int sock, Frame frame) {
 Frame readFrame(int sock) {
 	Frame frame;
 	char length[2];
-
-	debug("readFrame()\n");
+	ssize_t resp;
 
 	//Lectura del camp type. 1 byte.
-	read(sock, &frame.type, sizeof(char));
+	resp = read(sock, &frame.type, sizeof(char));
+
+	if (resp <= 0) {
+		frame.type = FRAME_NULL;
+		return frame;
+	}
 
 	//Lectura del camp header. 10 bytes.
 	read(sock, frame.header, HEADER_SIZE);
 
 	//Lectura del camp length. 2 bytes. Es llegeix un array de dos caràcters i es volquen en una variable
 	//de tipus short per facilitar el tractament.
-	read(sock, length, 2);
+	read(sock, length, (size_t) 2);
 	frame.length = (short) (((length[0] << 8) & 0xFF00) | (length[1] & 0x00FF));
 
 	//Lectura del camp data segons la llargada indicada al camp length. Mida variable.

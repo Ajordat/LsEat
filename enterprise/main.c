@@ -16,8 +16,6 @@ int main(int argc, char **argv) {
 
 	readMenuFile(argv[2]);
 
-	//TODO: Connecta amb DATA
-
 	if(!connectData()){
 		print("No s'ha pogut establir la connexió amb Data.\n");
 		freeResources();
@@ -26,7 +24,6 @@ int main(int argc, char **argv) {
 
 	print("Connexió amb Data realitzada correctament.\n");
 
-	//FI
 
 	print(MSG_LOADED_MENU);
 
@@ -37,7 +34,6 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	//TODO: Crear thread d'UPDATE i que aquest vagi enviant els updates a Data
 	signal(SIGINT, controlSigint);
 
 	updateThread();

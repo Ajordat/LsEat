@@ -6,6 +6,7 @@
 #include <sys/fcntl.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <signal.h>
 
 #include "utils.h"
 #include "network.h"
@@ -69,9 +70,9 @@ void listenSocket(int sock);
 
 void *attendPetition(void *sock);
 
-void connectPicard(int sock, Frame frame);
+char connectPicard(int sock, Frame frame, Picard *picard);
 
-void disconnectPicard(int sock, Frame frame, Menu *dishes);
+void disconnectPicard(int sock, Frame frame);
 
 void freeResources();
 

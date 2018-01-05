@@ -120,9 +120,11 @@ char HEAP_update(MinHeap *heap, int port, int users) {
 	for (; heap->length; i++) {
 		if (heap->nodes[i].e.port == port) {
 			e = heap->nodes[i].e;
-			HEAP_remove(heap, i, NO_FREE);
-			e.users = users;
-			HEAP_push(heap, e);
+			if(e.users != users){
+				HEAP_remove(heap, i, NO_FREE);
+				e.users = users;
+				HEAP_push(heap, e);
+			}
 			return 1;
 		}
 	}

@@ -48,7 +48,7 @@ char connectEnterprise(char *name, int money) {
 Frame establishConnection(char *name) {
 	Frame frame;
 
-	frame = createFrame(CODE_CONNECT, "PIC_NAME", name);
+	frame = createFrame(CODE_CONNECT, HEADER_INIT_CONN, name);
 	debugFrame(frame);
 
 	writeFrame(frame);
@@ -69,7 +69,7 @@ char disconnect(char *name) {
 	Frame frame;
 	char resp;
 
-	frame = createFrame(CODE_DISCONNECT, "PIC_NAME", name);
+	frame = createFrame(CODE_DISCONNECT, HEADER_END_CONN, name);
 	debugFrame(frame);
 
 	resp = writeFrame(frame);
@@ -91,6 +91,101 @@ char disconnect(char *name) {
 		print("[Desconnecta Enterprise OK]\n");
 	else
 		print("[Desconnecta Enterprise KO]\n");
+	return 1;
+}
+
+char sendRequestDish(Command cmd, char *data, Menu *dishes) {
+	Frame frame;
+	char aux[LENGTH];
+	int i, resp;
+	size_t length;
+
+	frame = createFrame(CODE_REQUEST, HEADER_REQ_DISH, data);
+	resp = writeFrame(frame);
+	destroyFrame(&frame);
+
+	if (!resp)
+		return 0;
+
+	frame = readFrame();
+
+	if (frame.type == FRAME_NULL)
+		return 0;
+
+	if (!strcasecmp(frame.header, HEADER_ORDER_OK)) {
+
+		print(MSG_ORDER_OK " Plat demanat!\n");
+
+		for (i = 0; i < dishes->quantity; i++) {
+			if (!strcasecmp(dishes->menu[i].name, cmd.plat)) {
+				dishes->menu[i].stock += cmd.unitats;
+				break;
+			}
+		}
+		if (i == dishes->quantity) {
+			dishes->quantity++;
+			dishes->menu = realloc(dishes->menu, sizeof(Dish) * dishes->quantity);
+			length = strlen(cmd.plat) + 1;
+			dishes->menu[i].name = malloc(length);
+			memcpy(dishes->menu[i].name, cmd.plat, length);
+			dishes->menu[i].stock = cmd.unitats;
+		}
+
+	} else if (!strcasecmp(frame.header, HEADER_ORDER_KO)) {
+
+		print(MSG_ORDER_KO);
+
+		switch (atoi(frame.data)) {    // NOLINT
+			case DATA_DISH_NOT_STOCK:
+				for (i = 0; frame.data[i] != '&'; i++);
+				resp = atoi(frame.data + i + 1);    // NOLINT
+				sprintf(aux, " Només queden %d unitats.\n", resp);
+				print(aux);
+				break;
+			case DATA_DISH_NOT_FOUND:
+				print(" No s'ha trobat el plat demanat.\n");
+				break;
+			default:
+				print(" Error a la trama. S'ha rebut [");
+				print(frame.data);
+				print("]\n");
+		}
+	}
+
+	destroyFrame(&frame);
+	return 1;
+}
+
+char sendRemoveDish(char*data) {
+	Frame frame;
+	char aux[LENGTH];
+	int resp;
+
+	frame = createFrame(CODE_REMOVE, HEADER_DEL_DISH, data);
+	resp = writeFrame(frame);
+	destroyFrame(&frame);
+
+	if (!resp)
+		return -1;
+
+	frame = readFrame();
+
+	if (frame.type == FRAME_NULL)
+		return -1;
+
+	if (!strcasecmp(frame.header, HEADER_ORDER_OK)) {
+		print(MSG_ORDER_OK " Plat descartat!\n");
+		destroyFrame(&frame);
+		return 0;
+	}
+
+	if (!strcasecmp(frame.header, HEADER_ORDER_KO)) {
+		memset(aux, '\0', LENGTH);
+		sprintf(aux, MSG_ORDER_KO " %s\n", frame.data);
+		print(aux);
+	}
+
+	destroyFrame(&frame);
 	return 1;
 }
 

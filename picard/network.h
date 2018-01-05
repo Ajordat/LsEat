@@ -2,28 +2,9 @@
 #define _PICARD_NETWORK_H_
 
 
+#include "types.h"
 #include "utils.h"
 #include "network_utils.h"
-
-
-#define CODE_CONNECT    (char)  0x01
-#define CODE_DISCONNECT (char)  0x02
-#define CODE_SHOWMENU   (char)  0x03
-#define CODE_REQUEST    (char)  0x04
-#define CODE_REMOVE     (char)  0x05
-#define CODE_PAYMENT        (char)  0x06
-
-
-typedef struct {
-	char *name;
-	char *ip;
-	int port;
-} Enterprise;
-
-typedef struct {
-	char *ip;
-	int port;
-} Socket;
 
 
 int sock;
@@ -36,6 +17,10 @@ char connectEnterprise(char *name, int money);
 char disconnect(char *name);
 
 Frame establishConnection(char *name);
+
+char sendRequestDish(Command cmd, char *data, Menu *dishes);
+
+char sendRemoveDish(char *data);
 
 char writeFrame(Frame);
 
