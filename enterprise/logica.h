@@ -20,6 +20,9 @@
 #define	MSG_CONN_PIC		"Connectant %s\n"
 #define	MSG_DISC_PIC		"Desconnectant %s\n"
 
+#define	CONNECTED		1
+#define	NOT_CONNECTED	0
+
 
 typedef struct {
 	char *name;
@@ -74,11 +77,11 @@ char connectPicard(int sock, Frame frame, Picard *picard);
 
 void disconnectPicard(int sock, Frame frame);
 
-void freeResources();
+void freeResources(char connected);
 
 void controlSigint();
 
-void updateThread();
+void createUpdateThread();
 
 
 #endif

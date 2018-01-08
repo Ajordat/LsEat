@@ -34,17 +34,19 @@ int HEAP_length(MinHeap heap);
 
 Enterprise HEAP_pop(MinHeap *);
 
+Enterprise HEAP_consulta(MinHeap);
+
 void HEAP_push(MinHeap *, Enterprise);
 
 char HEAP_remove(MinHeap *, int index, int ffree);
 
 void HEAP_close(MinHeap *);
 
-char HEAP_update(MinHeap *heap, int port, int users);
+Enterprise HEAP_update(MinHeap *heap, Enterprise);
 
-int HEAP_find(MinHeap heap, int port);
+int HEAP_find(MinHeap heap, Enterprise);
 
-char HEAP_disconnect(MinHeap *heap, int port);
+char HEAP_disconnect(MinHeap *heap, Enterprise);
 
 
 #endif

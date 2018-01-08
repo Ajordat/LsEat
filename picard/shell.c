@@ -1,5 +1,4 @@
 #include "shell.h"
-#include "types.h"
 
 
 void initShell() {
@@ -9,7 +8,7 @@ void initShell() {
 }
 
 /**
- * Funció inline utilitzada per comprovar que no hi ha més arguments dels que hi hauria d'haver a una comanda interna de Picard.
+ * Funció utilitzada per comprovar que no hi ha més arguments dels que hi hauria d'haver a una comanda interna de Picard.
  * Si no n'hi ha més retorna el codi rebut, altrament indica un error.
  *
  * @param index 	Index a partir del que s'ha de comprovar si hi ha més arguments
@@ -17,7 +16,8 @@ void initShell() {
  * @param code 		Codi a retornar si el nombre d'arguments és correcte
  * @return 			Retorna el codi rebut com a paràmetre o un error segons la comanda introduïda sigui correcta
  */
-inline char checkParameters(int index, const char *command, char code) {
+char
+checkParameters(int index, const char *command, char code) {    //Si es compilés en c99 podria fer que fos inline :(
 	return endOfWord(index, command) ? code : ERR_N_PARAMS;
 }
 
@@ -129,23 +129,27 @@ void appendCommand(Command cmd) {
 		free(history[nLog]);
 
 	switch (cmd.code) {
+
 		case CODE_CONNECT:
 			length = strlen(CMD_CONNECT) + 2;
 			history[nLog] = malloc(length);
 			memcpy(history[nLog], CMD_CONNECT, length);
 			break;
+
 		case CODE_SHOWMENU:
 			length = strlen(CMD_SHOW) + 1 + strlen(CMD_MENU) + 1;
 			history[nLog] = malloc(length);
 			memset(history[nLog], '\0', length);
 			sprintf(history[nLog], "%s %s", CMD_SHOW, CMD_MENU);
 			break;
+
 		case CODE_SHOWORDER:
 			length = strlen(CMD_SHOW) + 1 + strlen(CMD_ORDER) + 1;
 			history[nLog] = malloc(length);
 			memset(history[nLog], '\0', length);
 			sprintf(history[nLog], "%s %s", CMD_SHOW, CMD_ORDER);
 			break;
+
 		case CODE_REQUEST:
 			myItoa(cmd.unitats * (cmd.unitats < 0 ? -1 : 1), aux);
 			length = strlen(CMD_REQUEST) + 1 + (!cmd.unitats) + (strlen(aux)) + (cmd.unitats < 0) + 1 +
@@ -154,6 +158,7 @@ void appendCommand(Command cmd) {
 			memset(history[nLog], '\0', length);    //Aquest length era length-1
 			sprintf(history[nLog], "%s %d %s", CMD_REQUEST, cmd.unitats, cmd.plat);
 			break;
+
 		case CODE_REMOVE:
 			myItoa(cmd.unitats * (cmd.unitats < 0 ? -1 : 1), aux);
 			length = strlen(CMD_REQUEST) + 1 + (!cmd.unitats) + (strlen(aux)) + (cmd.unitats < 0) + 1 +
@@ -162,26 +167,28 @@ void appendCommand(Command cmd) {
 			memset(history[nLog], '\0', length);    //Aquest length era length-2
 			sprintf(history[nLog], "%s %d %s", CMD_REMOVE, cmd.unitats, cmd.plat);
 			break;
+
 		case CODE_PAYMENT:
 			length = strlen(CMD_PAY) + 1;
 			history[nLog] = malloc(length);
 			memcpy(history[nLog], CMD_PAY, length);
 			break;
+
 		case CODE_DISCONNECT:
 			length = strlen(CMD_DISCONNECT) + 2;
 			history[nLog] = malloc(length);
 			memcpy(history[nLog], CMD_DISCONNECT, length);
 			break;
+			
 		default:
-			if (cmd.plat != NULL) {
-				debug("Plat -> |");
-				debug(cmd.plat);
-				debug("|\n");
-				length = strlen(cmd.plat) + 1;
-				history[nLog] = malloc(length);
-				memcpy(history[nLog], cmd.plat, length);
-			} else
-				nLog--;
+			if (cmd.plat == NULL)
+				return;
+			debug("Plat -> |");
+			debug(cmd.plat);
+			debug("|\n");
+			length = strlen(cmd.plat) + 1;
+			history[nLog] = malloc(length);
+			memcpy(history[nLog], cmd.plat, length);
 			break;
 	}
 	nLog++;

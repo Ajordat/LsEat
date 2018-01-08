@@ -5,22 +5,23 @@
 
 
 int main(void) {
-	char aux[LENGTH];
 
 	readConfigFile(FILE_CONFIG);
 
 	sock_picard = createSocket(config.ip, config.port_picard);
 	if (sock_picard < 0) {
-		sprintf(aux, MSG_PORT_PIC_ERR);
-		print(aux);
+		print(MSG_PORT_PIC_ERR);
+		print(MSG_CONFIG_ERR);
+		print(strerror(errno));
 		freeResources();
 		exit(EXIT_FAILURE);
 	}
 
 	sock_enterprise = createSocket(config.ip, config.port_enterprise);
 	if (sock_enterprise < 0) {
-		sprintf(aux, MSG_PORT_ENT_ERR);
-		print(aux);
+		print(MSG_PORT_ENT_ERR);
+		print(MSG_CONFIG_ERR);
+		print(strerror(errno));
 		freeResources();
 		exit(EXIT_FAILURE);
 	}

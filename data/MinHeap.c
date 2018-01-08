@@ -23,11 +23,15 @@ void HEAP_print(MinHeap heap) {
 	for (j = 0; j < heap.length - 1; j++) {
 		sprintf(aux, "[%s-%s-%d-%d]-", heap.nodes[j].e.name, heap.nodes[j].e.ip, heap.nodes[j].e.port,
 				heap.nodes[j].e.users);
-		print(aux);
+		debug(aux);
 	}
-	sprintf(aux, "[%s-%s-%d-%d]\n", heap.nodes[j].e.name, heap.nodes[j].e.ip, heap.nodes[j].e.port,
-			heap.nodes[j].e.users);
-	print(aux);
+	if (heap.length) {
+		sprintf(aux, "[%s-%s-%d-%d]\n", heap.nodes[j].e.name, heap.nodes[j].e.ip, heap.nodes[j].e.port,
+				heap.nodes[j].e.users);
+		debug(aux);
+	} else {
+		debug("[Empty Heap]");
+	}
 }
 
 void pushDown(MinHeap *heap, int pos) {
@@ -51,7 +55,7 @@ Enterprise HEAP_pop(MinHeap *heap) {
 	Node node;
 
 	if (!heap->length) {
-		node.value = -1;
+		node.e.port = -1;
 		return node.e;
 	}
 
@@ -65,6 +69,19 @@ Enterprise HEAP_pop(MinHeap *heap) {
 	heap->nodes = (Node *) realloc(heap->nodes, sizeof(Node) * (heap->length));
 
 	return node.e;
+}
+
+Enterprise HEAP_consulta(MinHeap heap) {
+	Enterprise e;
+
+	if (!heap.length) {
+		e.port = -1;
+		e.name = e.ip = NULL;
+		e.users = -1;
+		return e;
+	}
+
+	return heap.nodes[0].e;
 }
 
 void HEAP_push(MinHeap *heap, Enterprise e) {
@@ -113,41 +130,42 @@ char HEAP_remove(MinHeap *heap, int index, int ffree) {
 	return 1;
 }
 
-char HEAP_update(MinHeap *heap, int port, int users) {
+Enterprise HEAP_update(MinHeap *heap, Enterprise ent) {
 	int i = 0;
 	Enterprise e;
 
+	e.ip = e.name = NULL;
+	e.users = e.port = -1;
+
 	for (; i < heap->length; i++) {
-		if (heap->nodes[i].e.port == port) {
+		if (heap->nodes[i].e.port == ent.port && !strcmp(heap->nodes[i].e.ip, ent.ip)) {
 			e = heap->nodes[i].e;
-			if (e.users != users) {
+			if (e.users != ent.users) {
 				HEAP_remove(heap, i, NO_FREE);
-				e.users = users;
+				e.users = ent.users;
 				HEAP_push(heap, e);
 			}
-			return 1;
+			break;
 		}
 	}
-	return 0;
+	return e;
 }
 
-int HEAP_find(MinHeap heap, int port) {
+int HEAP_find(MinHeap heap, Enterprise e) {
 	int i = 0;
 
-	for (; i < heap.length; i++) {
-		if (heap.nodes[i].e.port == port) {
+	for (; i < heap.length; i++)
+		if (heap.nodes[i].e.port == e.port && !strcmp(heap.nodes[i].e.ip, e.ip))
 			return i;
-		}
-	}
+
 	return -1;
 }
 
-char HEAP_disconnect(MinHeap *heap, int port) {
+char HEAP_disconnect(MinHeap *heap, Enterprise e) {
 	int i = 0;
 
-//	for (; i < heap->length; i++) {
-	for (; heap->length; i++) {
-		if (heap->nodes[i].e.port == port) {
+	for (; i < heap->length; i++) {
+		if (heap->nodes[i].e.port == e.port && !strcmp(heap->nodes[i].e.ip, e.ip)) {
 			HEAP_remove(heap, i, FREE);
 			return 1;
 		}

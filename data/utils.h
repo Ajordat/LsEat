@@ -7,7 +7,9 @@
 
 
 #define LENGTH	100
-#define DEBUG	1
+#define DEBUG	0
+#define COLOR_DEBUG		"\x1b[33m"	//YELLOW
+#define COLOR_RESET		"\x1b[0m"
 
 
 void debug(char *msg);

@@ -9,14 +9,14 @@
  * @return 		File descriptor amb un socket per fer de servidor o -1 si no l'ha pogut obrir
  */
 int createSocket(char *ip, int port) {
-	char aux[LENGTH];
+//	char aux[LENGTH];
 	struct sockaddr_in addr;
 	int sock;
 
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock < 0) {
-		sprintf(aux, MSG_CONEX_ERR);
-		print(aux);
+//		sprintf(aux, MSG_CONEX_ERR);
+//		print(aux);
 		return -1;
 	}
 
@@ -25,10 +25,10 @@ int createSocket(char *ip, int port) {
 	addr.sin_addr.s_addr = inet_addr(ip);
 
 	if (bind(sock, (void *) &addr, sizeof(addr)) < 0) {
-		sprintf(aux, MSG_CONEX_ERR);
-		print(aux);
-		sprintf(aux, "%s\n", strerror(errno));
-		print(aux);
+//		sprintf(aux, MSG_CONEX_ERR);
+//		print(aux);
+//		sprintf(aux, "%s\n", strerror(errno));
+//		print(aux);
 		return -1;
 	}
 	return sock;
@@ -75,6 +75,8 @@ char sendFrame(int socket, Frame frame) {
 
 	//Enviament de la trama.
 	result = write(socket, trama, 1 + HEADER_SIZE + 2 + strlen(frame.data));
+
+	//Debug frame
 	trama[0] += '0';
 	trama[strlen(trama)] = '\n';
 	debug(trama);

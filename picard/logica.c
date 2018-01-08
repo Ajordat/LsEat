@@ -556,8 +556,10 @@ char menuOptions(Command cmd) {
 
 		case ERR_UNK_CMD:
 			print(MSG_CONN_LOSS " Comanda no reconeguda");
-			sprintf(aux, " -> [%s]", history[nLog - 1]);
-			debug(aux);
+			if (nLog) {
+				sprintf(aux, " -> [%s]", history[nLog - 1]);
+				debug(aux);
+			}
 			print("\n");
 			free(cmd.plat);
 			break;

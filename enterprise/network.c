@@ -8,26 +8,19 @@
  * @return 		El socket creat. Si no s'ha pogut crear, -1
  */
 int createClientSocket(char *ip, int port) {
-//	char aux[LENGTH];
 	struct sockaddr_in addr;
 
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 
-	if (sock <= 0) {
-//		sprintf(aux, "Error a l'establir connexió.\n%s\n", strerror(errno));
-//		write(STDOUT_FILENO, aux, strlen(aux));
+	if (sock <= 0)
 		return -1;
-	}
 
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons((uint16_t) port);
 	addr.sin_addr.s_addr = inet_addr(ip);
 
-	if (connect(sock, (void *) &addr, sizeof(addr)) < 0) {
-//		sprintf(aux, "Error a l'establir connexió. 2\n%s\n", strerror(errno));
-//		write(STDOUT_FILENO, aux, strlen(aux));
+	if (connect(sock, (void *) &addr, sizeof(addr)) < 0)
 		return -1;
-	}
 
 	return sock;
 }

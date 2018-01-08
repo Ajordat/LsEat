@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
 
 	if(!connectData()){
 		print("No s'ha pogut establir la connexió amb Data.\n");
-		freeResources();
+		freeResources(NOT_CONNECTED);
 		exit(EXIT_FAILURE);
 	}
 
@@ -30,13 +30,13 @@ int main(int argc, char **argv) {
 	sock_picard = createServerSocket(config.ip_picard, config.port_picard);
 
 	if (sock_picard < 0) {
-		freeResources();
+		freeResources(CONNECTED);
 		exit(EXIT_FAILURE);
 	}
 
 	signal(SIGINT, controlSigint);
 
-	updateThread();
+	createUpdateThread();
 
 	listenSocket(sock_picard);
 

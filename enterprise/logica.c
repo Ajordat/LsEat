@@ -145,7 +145,7 @@ void readMenuFile(char *filename) {
 	}
 }
 
-//TODO thread de update
+
 void *updateInformation() {
 	char aux[LENGTH];
 	Frame frame;
@@ -158,13 +158,14 @@ void *updateInformation() {
 
 		if (sock_data < 0) {
 			print("[UPDATE FAILURE]\n");
-//			return NULL;
+			sock_data = -1;
 			pthread_exit(NULL);
 		}
-//			return NULL;
 
 		memset(aux, '\0', LENGTH);
+		pthread_mutex_lock(&mutUsers);
 		sprintf(aux, "%d&%d", config.port_picard, nUsers);
+		pthread_mutex_unlock(&mutUsers);
 		frame = createFrame(CODE_UPDATE, "UPDATE", aux);
 
 		debugFrame(frame);
@@ -173,33 +174,28 @@ void *updateInformation() {
 
 		if (!resp) {
 			close(sock_data);
+			sock_data = -1;
 			print("[UPDATE FAILURE]\n");
-//			return NULL;
 			pthread_exit(NULL);
 		}
 
-		frame = readFrame(sock_data);
+		frame = readFrame(sock_data);	//TODO: LLEGIR SI SÍ O NO
 		destroyFrame(&frame);
 
 		close(sock_data);
+		sock_data = -1;
 
 		if (frame.type == FRAME_NULL) {
 			print("[UPDATE FAILURE]\n");
-//			return NULL;
 			pthread_exit(NULL);
 		}
 
 		print("[UPDATE]\n");
-
 	}
 }
 
-void updateThread() {
-
-//	fiUpdate = 0;
-	pthread_create(&update, NULL, updateInformation, NULL);
-	pthread_detach(update);
-
+void createUpdateThread() {
+	pthread_create(&update, NULL, (void *(*)(void *)) updateInformation, NULL);
 }
 
 
@@ -229,7 +225,7 @@ void listenSocket(int sock) {
 		debug("[WAITING]\n");
 		if ((aux_sock = accept(sock, (void *) &addr, &addr_len)) < 0) {
 			print(MSG_CONEX_ERR);
-			freeResources();
+			freeResources(CONNECTED);
 			exit(EXIT_FAILURE);
 		}
 
@@ -676,17 +672,18 @@ void disconnectFromData() {
 /**
  * Funció per alliberar els recursos del programa.
  */
-void freeResources() {
+void freeResources(char connected) {
 	int i;
 
 
-//	fiUpdate = 1;
 	pthread_cancel(update);
-//	pthread_join(update, NULL);
+	pthread_join(update, NULL);
+
 	pthread_mutex_destroy(&mutUsers);
 	pthread_mutex_destroy(&mutMenu);
 
-	disconnectFromData();
+	if (connected)
+		disconnectFromData();
 
 	free(config.name);
 	free(config.ip_picard);
@@ -708,6 +705,6 @@ void freeResources() {
  * Funció per a capturar el signal SIGINT i alliberar els recursos abans d'aturar l'execució.
  */
 void controlSigint() {
-	freeResources();
+	freeResources(CONNECTED);
 	exit(EXIT_SUCCESS);
 }

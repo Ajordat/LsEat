@@ -1,4 +1,5 @@
 #include "logica.h"
+#include "MinHeap.h"
 
 /**
  * Llegeix el fitxer de configuració que conté la seva ip i els dos ports pels Picards i els Enterprise.
@@ -72,43 +73,100 @@ void listenServerSockets() {
 
 			attendPetition(new_sock);
 			close(new_sock);
-			HEAP_print(minheap);
+
+			if (DEBUG)
+				HEAP_print(minheap);
+
 		} else return;
 
 	}
 }
 
-char updateEnterprise(const char *data) {
+void updateEnterprise(int sock, const char *data) {
 	int i, j;
-	int port;
-	int users;
+	Enterprise e, found;
 	char aux[LENGTH];
+	Frame frame;
+	struct sockaddr_in addr;
+	socklen_t addr_size = sizeof(struct sockaddr_in);
+
+	getpeername(sock, (struct sockaddr *) &addr, &addr_size);
+
+	e.ip = malloc(IP_SIZE);
+	memset(e.ip, '\0', IP_SIZE);
+	strcpy(e.ip, inet_ntoa(addr.sin_addr));
+
+	debug(e.ip);
 
 	for (i = 0; data[i] != '&'; i++) {
 		aux[i] = data[i];
 	}
 	aux[i] = '\0';
-	port = atoi(aux); // NOLINT
+	e.port = atoi(aux); // NOLINT
+	debug("\nPort: ");
+	debug(aux);
 
 	for (j = 0, i++; data[i]; i++, j++) {
 		aux[j] = data[i];
 	}
 	aux[j] = '\0';
-	users = atoi(aux); // NOLINT
+	e.users = atoi(aux); // NOLINT
+	debug("\nUsers: ");
+	debug(aux);
+	debug("\n");
 
-	return HEAP_update(&minheap, port, users);
+
+	found = HEAP_update(&minheap, e);
+	free(e.ip);
+
+	if (found.port < 0) {
+		print(MSG_UPDATE_KO);
+		frame = createFrame(CODE_UPDATE, HEADER_ENT_UPDATE_KO, NULL);
+	} else {
+		sprintf(aux, MSG_UPDATE_OK, found.name, e.users);
+		print(aux);
+		frame = createFrame(CODE_UPDATE, HEADER_ENT_UPDATE_OK, NULL);
+	}
+
+	sendFrame(sock, frame);
+	destroyFrame(&frame);
 }
 
-char disconnectEnterprise(const char *data) {
+void disconnectEnterprise(int sock, const char *data) {
 	int i;
 	char aux[LENGTH];
+	Frame frame;
+	char answer;
+	Enterprise e;
+	struct sockaddr_in addr;
+	socklen_t addr_size = sizeof(struct sockaddr_in);
+
+	getpeername(sock, (struct sockaddr *) &addr, &addr_size);
+
+	e.ip = malloc(IP_SIZE);
+	memset(e.ip, '\0', IP_SIZE);
+	strcpy(e.ip, inet_ntoa(addr.sin_addr));
+
+	debug(e.ip);
+	debug("\n");
 
 	for (i = 0; data[i]; i++) {
 		aux[i] = data[i];
 	}
 	aux[i] = '\0';
+	e.port = atoi(aux);    // NOLINT
+	answer = HEAP_disconnect(&minheap, e);
 
-	return HEAP_disconnect(&minheap, atoi(aux));  // NOLINT
+	if (answer) {
+		print(MSG_DISC_OK);
+		frame = createFrame(CODE_DISCONNECT, HEADER_ENT_DISC_OK, NULL);
+	} else {
+		print(MSG_DISC_KO);
+		frame = createFrame(CODE_DISCONNECT, HEADER_ENT_DISC_KO, NULL);
+	}
+	sendFrame(sock, frame);
+	destroyFrame(&frame);
+	free(e.ip);
 }
 
 /**
@@ -119,30 +177,30 @@ char disconnectEnterprise(const char *data) {
  */
 void attendPetition(int sock) {
 	Frame frame;
-	char answer = 0;
 
 	frame = readFrame(sock);
+
+	if (frame.type == FRAME_NULL)
+		return;
+
 	debugFrame(frame);
 
 	switch (frame.type) {
 		case CODE_CONNECT:
+			print(MSG_CONNEX_IN);
 			connectSocket(sock, frame);
 			break;
 
 		case CODE_UPDATE:
-			answer = updateEnterprise(frame.data);
-			free(frame.data);
-			frame = createFrame(CODE_UPDATE, answer ? "UPDATEOK" : "UPDATEKO", NULL);
-			sendFrame(sock, frame);
-			free(frame.data);
+			print(MSG_UPDATE_IN);
+			updateEnterprise(sock, frame.data);
+			destroyFrame(&frame);
 			break;
 
 		case CODE_DISCONNECT:        //TODO: HI HA ALGUN CAS QUE NO ALLIBERA UN ENTERPRISE
-			answer = disconnectEnterprise(frame.data);
-			free(frame.data);
-			frame = createFrame(CODE_DISCONNECT, answer ? "CONOK" : "CONKO", NULL);
-			sendFrame(sock, frame);
-			free(frame.data);
+			print(MSG_DISC_IN);
+			disconnectEnterprise(sock, frame.data);
+			destroyFrame(&frame);
 			break;
 
 		default:
@@ -200,38 +258,49 @@ void connectSocket(int sock, Frame frame) {
 	char aux[LENGTH];
 	Enterprise ent;
 
-	if (!strcmp(frame.header, HEADER_PIC_DATA_CONNECT)) {
+	if (!strcmp(frame.header, HEADER_PIC_CONN_REQ)) {
+		print(MSG_CONNECT_PIC);
+
 		name = malloc(strlen(frame.data) + 1);
 		strcpy(name, frame.data);
-		sprintf(aux, MSG_CONNECT_PIC, name);
+		destroyFrame(&frame);
+
+		sprintf(aux, MSG_WELCOME_CLIENT, name);
 		print(aux);
-		free(frame.data);
 
 		frame = getEnterpriseConnection();
 		debugFrame(frame);
 		sendFrame(sock, frame);
 
-		sprintf(aux, MSG_DISCONNECT_PIC, name);
-		print(aux);
-
-		free(frame.data);
+		destroyFrame(&frame);
 		free(name);
-	} else {
-		print("PETICIÓ D'ENTERPRISE!\n");
-		print(frame.data);
-		print("\n");
+
+	} else if (!strcmp(frame.header, HEADER_ENT_CONN_REQ)) {
+		print(MSG_CONNECT_ENT);
+
+		debug(frame.data);
+		debug("\n");
 
 		ent = parseEnterprise(frame.data);
 		destroyFrame(&frame);
 
-		if (HEAP_find(minheap, ent.port) < 0) {
-			HEAP_push(&minheap, ent);
-			frame = createFrame(CODE_CONNECT, HEADER_DATA_ENT_CON_OK, NULL);
+		sprintf(aux, MSG_WELCOME_CLIENT, ent.name);
+		print(aux);
+
+		if (HEAP_find(minheap, ent) >= 0) {
+			print(MSG_CONN_ENT_KO);
+			frame = createFrame(CODE_CONNECT, HEADER_ENT_CON_KO, NULL);
+			free(ent.name);
+			free(ent.ip);
 		} else {
-			frame = createFrame(CODE_CONNECT, HEADER_DATA_ENT_CON_KO, NULL);
+			print(MSG_CONN_ENT_OK);
+			HEAP_push(&minheap, ent);
+			frame = createFrame(CODE_CONNECT, HEADER_ENT_CON_OK, NULL);
 		}
 		sendFrame(sock, frame);
 		destroyFrame(&frame);
+	} else {
+		print(MSG_CONNECT_UNK);
 	}
 }
 
@@ -246,18 +315,20 @@ Frame getEnterpriseConnection() {
 
 
 	if (!HEAP_length(minheap)) {
-		return createFrame(CODE_CONNECT, HEADER_DATA_PIC_CON_KO, NULL);
+		print(MSG_CONN_PIC_KO);
+		return createFrame(CODE_CONNECT, HEADER_PIC_CON_KO, NULL);
 	}
 
-	ent = HEAP_pop(&minheap);
 
-//	ent.users++;
+	ent = HEAP_consulta(minheap);
 
-	HEAP_push(&minheap, ent);
+	sprintf(aux, MSG_CONN_PIC_OK, ent.name);
+	print(aux);
+
 	memset(aux, '\0', LENGTH);
 	sprintf(aux, "%s&%s&%d", ent.name, ent.ip, ent.port);
 
-	return createFrame(CODE_CONNECT, HEADER_DATA_PIC_CON_OK, aux);
+	return createFrame(CODE_CONNECT, HEADER_PIC_CON_OK, aux);
 }
 
 /**
