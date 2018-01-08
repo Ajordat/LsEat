@@ -30,19 +30,10 @@ char connectData() {
  * Funció per comprovar que el nombre d'arguments sigui correcte.
  *
  * @param argc 	Nombre d'arguments
- * @return 		0 si és correcte. Altrament, 1.
+ * @return 		1 si és correcte. Altrament, 0.
  */
-char checkProgramArguments(int argc) {
-	char aux[LENGTH];
-
-	if (argc != 3) {
-		sprintf(aux, "El format de la crida és incorrecte, ha de ser:\n");
-		print(aux);
-		sprintf(aux, "\tenterprise\t<config_file.dat>\t<menu_file.dat>\n");
-		print(aux);
-		exit(EXIT_FAILURE);
-	}
-	return 0;
+char checkProgramArguments(int argc) {	//inline :(
+	return argc == 3;
 }
 
 /**
@@ -190,12 +181,12 @@ void *updateInformation() {
 			pthread_exit(NULL);
 		}
 
-		print("[UPDATE]\n");
 	}
 }
 
 void createUpdateThread() {
 	pthread_create(&update, NULL, (void *(*)(void *)) updateInformation, NULL);
+	print(MSG_CREATE_UPD);
 }
 
 
@@ -209,6 +200,7 @@ void listenSocket(int sock) {
 	socklen_t addr_len;
 	int *new_sock, aux_sock;
 	pthread_t id;
+	char aux[LENGTH];
 
 	print(MSG_WAITING);
 
@@ -224,7 +216,8 @@ void listenSocket(int sock) {
 
 		debug("[WAITING]\n");
 		if ((aux_sock = accept(sock, (void *) &addr, &addr_len)) < 0) {
-			print(MSG_CONEX_ERR);
+			sprintf(aux, MSG_CONN_ERR, strerror(errno));
+			print(aux);
 			freeResources(CONNECTED);
 			exit(EXIT_FAILURE);
 		}
@@ -238,9 +231,7 @@ void listenSocket(int sock) {
 
 		pthread_create(&id, NULL, attendPetition, new_sock);
 		pthread_detach(id);
-
 	}
-
 }
 
 char sendMenu(int sock) {
@@ -257,6 +248,7 @@ char sendMenu(int sock) {
 	for (i = 0; i < quantity; i++) {
 
 		memset(dish, '\0', LENGTH);
+
 		pthread_mutex_lock(&mutMenu);
 		memcpy(dish, menu.menu[i].name, strlen(menu.menu[i].name));
 		pthread_mutex_unlock(&mutMenu);
@@ -264,28 +256,34 @@ char sendMenu(int sock) {
 		strcat(dish, "&");
 
 		memset(buffer, '\0', INT_LENGTH);
+
 		pthread_mutex_lock(&mutMenu);
 		myItoa(menu.menu[i].price, buffer);    // NOLINT
 		pthread_mutex_unlock(&mutMenu);
-		strcat(dish, buffer);
 
+		strcat(dish, buffer);
 		strcat(dish, "&");
 
 		memset(buffer, '\0', INT_LENGTH);
+
 		pthread_mutex_lock(&mutMenu);
 		myItoa(menu.menu[i].stock, buffer);    // NOLINT
 		pthread_mutex_unlock(&mutMenu);
+
 		strcat(dish, buffer);
 
-		frame = createFrame(CODE_SHOWMENU, "DISH", dish);
+		frame = createFrame(CODE_SHOWMENU, HEADER_SHW_MENU_DISH, dish);
 		resp = sendFrame(sock, frame);
 		destroyFrame(&frame);
+
 		if (!resp)
 			return 0;
 	}
-	frame = createFrame(CODE_SHOWMENU, "END_MENU", NULL);
+
+	frame = createFrame(CODE_SHOWMENU, HEADER_SHW_MENU_END_DISH, NULL);
 	resp = sendFrame(sock, frame);
 	destroyFrame(&frame);
+
 	return resp;
 }
 
@@ -320,6 +318,9 @@ char acceptDish(int sock, Frame frame, Menu *dishes) {
 	dish = parseDish(frame.data);
 	destroyFrame(&frame);
 
+	sprintf(aux, MSG_REQ_DISH, dish.name);
+	print(aux);
+
 	pthread_mutex_lock(&mutMenu);
 	quantity = menu.quantity;
 	pthread_mutex_unlock(&mutMenu);
@@ -331,8 +332,13 @@ char acceptDish(int sock, Frame frame, Menu *dishes) {
 				menu.menu[i].stock -= dish.stock;
 				dish.price = menu.menu[i].price;
 				pthread_mutex_unlock(&mutMenu);
-				frame = createFrame(CODE_REQUEST, "ORDOK", NULL);
+
+				sprintf(aux, MSG_REQ_OK, dish.stock);
+				print(aux);
+
+				frame = createFrame(CODE_REQUEST, HEADER_REQ_OK, NULL);
 				debug("ORDOK\n");
+
 				for (i = 0; i < dishes->quantity; i++) {
 					if (!strcasecmp(dishes->menu[i].name, dish.name)) {
 						dishes->menu[i].stock += dish.stock;
@@ -353,12 +359,11 @@ char acceptDish(int sock, Frame frame, Menu *dishes) {
 					debug(aux);
 				}
 			} else {
-//				pthread_mutex_unlock(&mutMenu);
-//				frame = createFrame(CODE_REQUEST, "ORDKO",
-//									dish.stock > 0 ? "No hi ha tant stock del plat." : "Valor d'stock incorrecte.");
 				sprintf(aux, "%d&%d", DATA_DISH_NOT_STOCK, menu.menu[i].stock);
 				pthread_mutex_unlock(&mutMenu);
-				frame = createFrame(CODE_REQUEST, "ORDKO", aux);
+
+				print(MSG_REQ_KO);
+				frame = createFrame(CODE_REQUEST, HEADER_REQ_KO, aux);
 				debug("ORDKO\n");
 			}
 			flag = 1;
@@ -367,8 +372,8 @@ char acceptDish(int sock, Frame frame, Menu *dishes) {
 	}
 
 	if (!flag) {
-//		frame = createFrame(CODE_REQUEST, "ORDKO", "No s'ha trobat el plat demanat.");
-		frame = createFrame(CODE_REQUEST, "ORDKO", DATA_DISH_NOT_FOUND);
+		print(MSG_REQ_NOT_FOUND);
+		frame = createFrame(CODE_REQUEST, HEADER_REQ_KO, DATA_DISH_NOT_FOUND);
 		debug("ORDKO\n");
 	}
 
@@ -381,30 +386,46 @@ char acceptDish(int sock, Frame frame, Menu *dishes) {
 
 char removeDish(int sock, Frame frame, Menu *dishes) {
 	Dish dish;
-	int i, flag;
+	int i, flag, quantity;
 	char resp;
+	char aux[LENGTH];
 
 	dish = parseDish(frame.data);
 	destroyFrame(&frame);
+
+	sprintf(aux, MSG_REM_DISH, dish.name);
+	print(aux);
+
+	pthread_mutex_lock(&mutMenu);
+	quantity = menu.quantity;
+	pthread_mutex_unlock(&mutMenu);
 
 	for (i = 0, flag = 0; i < dishes->quantity; i++) {
 		if (!strcasecmp(dish.name, dishes->menu[i].name)) {
 			if (dishes->menu[i].stock >= dish.stock && dish.stock > 0) {
 				dishes->menu[i].stock -= dish.stock;
-				pthread_mutex_lock(&mutMenu);
-				for (i = 0; i < menu.quantity; i++) {
+
+				for (i = 0; i < quantity; i++) {
+					pthread_mutex_lock(&mutMenu);
 					if (!strcasecmp(dish.name, menu.menu[i].name)) {
 						menu.menu[i].stock += dish.stock;
 						pthread_mutex_unlock(&mutMenu);
-						frame = createFrame(CODE_REMOVE, "ORDOK", NULL);
+
+						sprintf(aux, MSG_REM_OK, dish.stock);
+						print(aux);
+
+						frame = createFrame(CODE_REMOVE, HEADER_REM_OK, NULL);
 						debug("ORDOK\n");
 						flag = 1;
 						break;
+					} else {
+						pthread_mutex_unlock(&mutMenu);
 					}
 				}
 				pthread_mutex_unlock(&mutMenu);
 			} else {
-				frame = createFrame(CODE_REMOVE, "ORDKO", "No es pot cancelar aquesta quantitat d'unitats.");
+				print(MSG_REM_KO);
+				frame = createFrame(CODE_REMOVE, HEADER_REM_KO, DATA_REM_KO);
 				debug("ORDKO\n");
 			}
 			break;
@@ -412,7 +433,8 @@ char removeDish(int sock, Frame frame, Menu *dishes) {
 	}
 
 	if (!flag) {
-		frame = createFrame(CODE_REMOVE, "ORDKO", "No s'ha trobat el plat demanat.");
+		print(MSG_REM_NOT_FOUND);
+		frame = createFrame(CODE_REMOVE, HEADER_REM_KO, DATA_REM_NOT_FOUND);
 		debug("ORDKO\n");
 	}
 
@@ -437,11 +459,16 @@ char solvePayment(int sock, Picard *picard, Menu *dishes) {
 	}
 
 	if (!cost && !quantity) {
-		frame = createFrame(CODE_PAYMENT, "PAYKO", "No has demanat res.");
+		print(MSG_PAY_EMPTY);
+		frame = createFrame(CODE_PAYMENT, HEADER_PAY_KO, DATA_PAY_EMPTY);
+
 	} else if (picard->money >= cost) {
+		sprintf(aux, MSG_PAY_OK, cost, MONEDA);
+		print(aux);
+
 		memset(aux, '\0', LENGTH);
 		myItoa(cost, aux);
-		frame = createFrame(CODE_PAYMENT, "PAYOK", aux);
+		frame = createFrame(CODE_PAYMENT, HEADER_PAY_OK, aux);
 		for (i = 0; i < dishes->quantity; i++) {
 			free(dishes->menu[i].name);
 		}
@@ -449,10 +476,13 @@ char solvePayment(int sock, Picard *picard, Menu *dishes) {
 		dishes->menu = NULL;
 		dishes->quantity = 0;
 		picard->money -= cost;
+
 	} else {
-		sprintf(aux, "Has excedit el teu pressupost: La comanda és de %d%s i tens %d%s.", cost, MONEDA, picard->money,
-				MONEDA);
-		frame = createFrame(CODE_PAYMENT, "PAYKO", aux);
+		sprintf(aux, MSG_PAY_CANT_AFFORD, cost, MONEDA, picard->money, MONEDA);
+		print(aux);
+
+		sprintf(aux, DATA_PAY_CANT_AFFORD, cost, MONEDA, picard->money, MONEDA);
+		frame = createFrame(CODE_PAYMENT, HEADER_PAY_KO, aux);
 	}
 
 	resp = sendFrame(sock, frame);
@@ -509,28 +539,34 @@ void *attendPetition(void *sock_aux) {
 		switch (frame.type) {
 
 			case CODE_CONNECT:
+				print(MSG_CONN_IN);
 				active = connectPicard(sock, frame, &picard);
 				break;
 
 			case CODE_DISCONNECT:
+				print(MSG_DISC_IN);
 				disconnectPicard(sock, frame);
 				active = 0;
 				break;
 
 			case CODE_SHOWMENU:
+				print(MSG_SHOW_MENU_IN);
 				destroyFrame(&frame);
 				active = sendMenu(sock);
 				break;
 
 			case CODE_REQUEST:
+				print(MSG_REQ_IN);
 				active = acceptDish(sock, frame, &dishes);
 				break;
 
 			case CODE_REMOVE:
+				print(MSG_REM_IN);
 				active = removeDish(sock, frame, &dishes);
 				break;
 
 			case CODE_PAYMENT:
+				print(MSG_PAY_IN);
 				destroyFrame(&frame);
 				active = solvePayment(sock, &picard, &dishes);
 				break;
@@ -568,6 +604,7 @@ char connectPicard(int sock, Frame frame, Picard *picard) {
 	money = malloc((size_t) frame.length - ref + 1);
 	memset(money, '\0', (size_t) frame.length - ref + 1);
 	debug("[READING MONEY]\n");
+
 	for (i = ref + 1; i < frame.length; i++)
 		money[i - ref - 1] = name[i];
 
@@ -585,7 +622,8 @@ char connectPicard(int sock, Frame frame, Picard *picard) {
 
 	destroyFrame(&frame);
 
-	frame = createFrame(CODE_CONNECT, HEADER_PIC_ENT_CONN_OK, NULL);
+	frame = createFrame(CODE_CONNECT, HEADER_PIC_CONN_OK, NULL);
+
 	pthread_mutex_lock(&mutUsers);
 	nUsers++;
 	pthread_mutex_unlock(&mutUsers);

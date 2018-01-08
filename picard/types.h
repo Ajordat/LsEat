@@ -26,6 +26,8 @@
 #define CMD_REMOVE		"ELIMINA"
 #define CMD_PAY			"PAGAR"
 
+#define	MSG_CONFIG_ERR			ANSI_COLOR_RED "[Config ERR] " ANSI_COLOR_RESET
+#define	MSG_WRONG_ARGS			MSG_CONFIG_ERR "El format de la crida és incorrecte, ha de ser:\n\tpicard <config_file.dat>\n"
 #define	MSG_INIT_CONN			"Connectant amb LsEat...\n"
 #define	MSG_CONN_RECOVERY		"Iniciant recuperació automàtica...\n"
 #define	MSG_CONN_DATA_OK		ANSI_COLOR_CYAN "[Connexió amb Data OK]\n" ANSI_COLOR_RESET

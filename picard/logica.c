@@ -7,14 +7,8 @@
  * @param argc 	Nombre d'arguments
  * @return 		0 si és correcte. Altrament, 1.
  */
-char checkProgramArguments(int argc) {
-
-	if (argc != 2) {
-		print("El format de la crida és incorrecte, ha de ser:\n\tpicard <config_file.dat>\n");
-		return 1;
-	}
-
-	return 0;
+char checkProgramArguments(int argc) {	//inline :(
+	return argc == 2;
 }
 
 /**
@@ -41,6 +35,7 @@ void readConfigFile(char *filename) {
 
 	file = open(filename, O_RDONLY);
 	if (file <= 0) {
+		print(MSG_CONFIG_ERR);
 		sprintf(msg, "Error a l'obrir el fitxer %s.\n", filename);
 		print(msg);
 		exit(EXIT_FAILURE);

@@ -7,23 +7,25 @@
 int main(int argc, char **argv) {
 	char aux[LENGTH];
 
-	checkProgramArguments(argc);
+	if (!checkProgramArguments(argc)) {
+		print(MSG_WRONG_ARGS);
+		exit(EXIT_FAILURE);
+	}
 
 	readConfigFile(argv[1]);
 
 	sprintf(aux, MSG_WELCOME, config.name);
 	print(aux);
 
-	readMenuFile(argv[2]);
-
-	if(!connectData()){
-		print("No s'ha pogut establir la connexió amb Data.\n");
+	if (!connectData()) {
+		print(MSG_CONN_DATA_KO);
 		freeResources(NOT_CONNECTED);
 		exit(EXIT_FAILURE);
 	}
 
-	print("Connexió amb Data realitzada correctament.\n");
+	print(MSG_CONN_DATA_OK);
 
+	readMenuFile(argv[2]);
 
 	print(MSG_LOADED_MENU);
 

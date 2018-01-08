@@ -161,7 +161,7 @@ void appendCommand(Command cmd) {
 
 		case CODE_REMOVE:
 			myItoa(cmd.unitats * (cmd.unitats < 0 ? -1 : 1), aux);
-			length = strlen(CMD_REQUEST) + 1 + (!cmd.unitats) + (strlen(aux)) + (cmd.unitats < 0) + 1 +
+			length = strlen(CMD_REMOVE) + 1 + (!cmd.unitats) + (strlen(aux)) + (cmd.unitats < 0) + 1 +
 					 strlen(cmd.plat) + 1;
 			history[nLog] = malloc(length);
 			memset(history[nLog], '\0', length);    //Aquest length era length-2
@@ -179,7 +179,7 @@ void appendCommand(Command cmd) {
 			history[nLog] = malloc(length);
 			memcpy(history[nLog], CMD_DISCONNECT, length);
 			break;
-			
+
 		default:
 			if (cmd.plat == NULL)
 				return;

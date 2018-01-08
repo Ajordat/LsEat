@@ -12,14 +12,6 @@
 #include "network.h"
 
 
-#define	MSG_WELCOME			"Benvingut al restaurant %s\n"
-#define	MSG_LOADED_MENU		"Carregat Menu!\n"
-#define MSG_FILE_ERR		"Error a l'obrir el fitxer %s.\n"
-#define	MSG_WAITING			"Esperant clients...\n"
-#define MSG_CONEX_ERR		"Error a l'establir connexió.\n"
-#define	MSG_CONN_PIC		"Connectant %s\n"
-#define	MSG_DISC_PIC		"Desconnectant %s\n"
-
 #define	CONNECTED		1
 #define	NOT_CONNECTED	0
 

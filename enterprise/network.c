@@ -39,8 +39,8 @@ int createServerSocket(char *ip, int port) {
 
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock <= 0) {
-		sprintf(aux, MSG_CONEX_ERR);
-		write(1, aux, strlen(aux));
+		sprintf(aux, MSG_CONN_ERR, strerror(errno));
+		print(aux);
 		return -1;
 	}
 
@@ -49,9 +49,7 @@ int createServerSocket(char *ip, int port) {
 	addr.sin_addr.s_addr = inet_addr(ip);
 
 	if (bind(sock, (void *) &addr, sizeof(addr)) < 0) {
-		sprintf(aux, MSG_CONEX_ERR);
-		print(aux);
-		sprintf(aux, "%s\n", strerror(errno));
+		sprintf(aux, MSG_CONN_ERR, strerror(errno));
 		print(aux);
 		return -1;
 	}
