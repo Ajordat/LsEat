@@ -20,17 +20,18 @@ void HEAP_print(MinHeap heap) {
 	char aux[LENGTH];
 
 	if (!heap.length) return;
+
 	for (j = 0; j < heap.length - 1; j++) {
-		sprintf(aux, "[%s-%s-%d-%d]-", heap.nodes[j].e.name, heap.nodes[j].e.ip, heap.nodes[j].e.port,
-				heap.nodes[j].e.users);
+		sprintf(aux, "[%s-%s-%d-%d-%d]-", heap.nodes[j].e.name, heap.nodes[j].e.ip, heap.nodes[j].e.port,
+				heap.nodes[j].e.users, heap.nodes[j].e.time);
 		debug(aux);
 	}
 	if (heap.length) {
-		sprintf(aux, "[%s-%s-%d-%d]\n", heap.nodes[j].e.name, heap.nodes[j].e.ip, heap.nodes[j].e.port,
-				heap.nodes[j].e.users);
+		sprintf(aux, "[%s-%s-%d-%d-%d]\n", heap.nodes[j].e.name, heap.nodes[j].e.ip, heap.nodes[j].e.port,
+				heap.nodes[j].e.users, heap.nodes[j].e.time);
 		debug(aux);
 	} else {
-		debug("[Empty Heap]");
+		debug("[Empty Heap]\n");
 	}
 }
 
@@ -71,17 +72,25 @@ Enterprise HEAP_pop(MinHeap *heap) {
 	return node.e;
 }
 
-Enterprise HEAP_consulta(MinHeap heap) {
+Enterprise HEAP_consulta(MinHeap *heap) {
 	Enterprise e;
+	double diff;
 
-	if (!heap.length) {
+	if (!heap->length) {
 		e.port = -1;
 		e.name = e.ip = NULL;
 		e.users = -1;
+		e.time = -1;
 		return e;
 	}
 
-	return heap.nodes[0].e;
+	diff = difftime(time(NULL), heap->nodes[0].e.last);
+	if (diff > heap->nodes[0].e.time + OFFSET_TIME) {
+		HEAP_pop(heap);
+		return HEAP_consulta(heap);
+	}
+
+	return heap->nodes[0].e;
 }
 
 void HEAP_push(MinHeap *heap, Enterprise e) {
@@ -90,6 +99,7 @@ void HEAP_push(MinHeap *heap, Enterprise e) {
 	int act = (heap->length - 1) / 2;
 	int last = heap->length;
 
+	e.last = time(NULL);
 	node.e = e;
 	node.value = e.users;
 
@@ -139,6 +149,7 @@ Enterprise HEAP_update(MinHeap *heap, Enterprise ent) {
 
 	for (; i < heap->length; i++) {
 		if (heap->nodes[i].e.port == ent.port && !strcmp(heap->nodes[i].e.ip, ent.ip)) {
+			heap->nodes[i].e.last = time(NULL);
 			e = heap->nodes[i].e;
 			if (e.users != ent.users) {
 				HEAP_remove(heap, i, NO_FREE);
@@ -176,7 +187,6 @@ char HEAP_disconnect(MinHeap *heap, Enterprise e) {
 void HEAP_close(MinHeap *heap) {
 	int i = 0;
 
-	printf("length -> %d\n", heap->length);
 	for (; i < heap->length; i++) {
 		free(heap->nodes[i].e.ip);
 		free(heap->nodes[i].e.name);

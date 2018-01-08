@@ -11,7 +11,7 @@ char connectData() {
 		return 0;
 
 	memset(aux, '\0', LENGTH);
-	sprintf(aux, "%s&%s&%d", config.name, config.ip_picard, config.port_picard);
+	sprintf(aux, "%s&%s&%d&%d", config.name, config.ip_picard, config.port_picard, config.refresh);
 	frame = createFrame(CODE_CONNECT, "ENT_INF", aux);
 
 	sendFrame(sock_data, frame);

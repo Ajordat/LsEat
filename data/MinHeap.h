@@ -3,16 +3,20 @@
 
 
 #include <stdio.h>
+#include <time.h>
 #include "utils.h"
 
-#define NO_FREE 0
-#define FREE	1
+#define NO_FREE 		0
+#define FREE			1
+#define OFFSET_TIME		2
 
 typedef struct {
 	char *name;
 	char *ip;
 	int port;
 	int users;
+	int time;
+	time_t last;
 } Enterprise;
 
 typedef struct {
@@ -34,7 +38,7 @@ int HEAP_length(MinHeap heap);
 
 Enterprise HEAP_pop(MinHeap *);
 
-Enterprise HEAP_consulta(MinHeap);
+Enterprise HEAP_consulta(MinHeap *);
 
 void HEAP_push(MinHeap *, Enterprise);
 

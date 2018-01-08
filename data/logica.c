@@ -233,13 +233,23 @@ Enterprise parseEnterprise(const char *data) {
 	j++; //saltem &
 
 	aux = malloc(sizeof(char));
-	for (i = 0; data[j]; j++) {
+	for (i = 0; data[j] != '&'; j++) {
 		aux[i] = data[j];
 		i++;
 		aux = realloc(aux, (size_t) i + 1);
 	}
 	aux[i] = '\0';
 	ent.port = atoi(aux); // NOLINT
+	free(aux);
+
+	aux = malloc(sizeof(char));
+	for (i = 0, j++; data[j]; j++) {
+		aux[i] = data[j];
+		i++;
+		aux = realloc(aux, (size_t) i + 1);
+	}
+	aux[i] = '\0';
+	ent.time = atoi(aux); // NOLINT
 	free(aux);
 
 	ent.users = 0;
@@ -295,6 +305,7 @@ void connectSocket(int sock, Frame frame) {
 		} else {
 			print(MSG_CONN_ENT_OK);
 			HEAP_push(&minheap, ent);
+
 			frame = createFrame(CODE_CONNECT, HEADER_ENT_CON_OK, NULL);
 		}
 		sendFrame(sock, frame);
@@ -319,8 +330,14 @@ Frame getEnterpriseConnection() {
 		return createFrame(CODE_CONNECT, HEADER_PIC_CON_KO, NULL);
 	}
 
+	HEAP_print(minheap);
+	ent = HEAP_consulta(&minheap);	//TODO: Comprovar si és vàlid
+	HEAP_print(minheap);
 
-	ent = HEAP_consulta(minheap);
+	if (ent.time < 0){
+		print(MSG_CONN_PIC_KO);
+		return createFrame(CODE_CONNECT, HEADER_PIC_CON_KO, NULL);
+	}
 
 	sprintf(aux, MSG_CONN_PIC_OK, ent.name);
 	print(aux);

@@ -12,6 +12,7 @@ char connectEnterprise(char *name, int money) {
 	Frame frame;
 	char aux[LENGTH], *data;
 
+
 	debug("[MAKING FRAME]\n");
 	myItoa(money, aux);
 	data = malloc((strlen(name) + 2 + strlen(aux)) * sizeof(char));

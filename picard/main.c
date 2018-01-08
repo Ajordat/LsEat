@@ -7,6 +7,7 @@
 int main(int argc, char **argv) {
 	char aux[LENGTH];
 
+
 	if (!checkProgramArguments(argc)) {
 		print(MSG_WRONG_ARGS);
 		exit(EXIT_FAILURE);
