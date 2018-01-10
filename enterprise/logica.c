@@ -184,11 +184,11 @@ void *updateInformation() {
 	}
 }
 
+
 void createUpdateThread() {
 	pthread_create(&update, NULL, (void *(*)(void *)) updateInformation, NULL);
 	print(MSG_CREATE_UPD);
 }
-
 
 /**
  * Funció d'escolta del socket. Bloqueja l'execució esperant que un client es connecti al seu port.
@@ -201,6 +201,7 @@ void listenSocket(int sock) {
 	int *new_sock, aux_sock;
 	pthread_t id;
 	char aux[LENGTH];
+
 
 	print(MSG_WAITING);
 
@@ -522,8 +523,8 @@ void exitThread(Menu *dishes) {
 void *attendPetition(void *sock_aux) {
 	Frame frame;
 	int sock = *((int *) sock_aux);
-	Menu dishes;
 	Picard picard;
+	Menu dishes;
 	int active = 0;
 
 	free(sock_aux);
@@ -532,8 +533,10 @@ void *attendPetition(void *sock_aux) {
 
 	do {
 		frame = readFrame(sock);
-		if (frame.type == FRAME_NULL)
+		if (frame.type == FRAME_NULL){
+			print(MSG_PIC_DOWN);
 			break;
+		}
 
 		debugFrame(frame);
 		switch (frame.type) {

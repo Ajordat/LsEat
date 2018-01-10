@@ -60,11 +60,12 @@
 #define	MSG_CONN_DATA_KO		MSG_CONN_KO "No s'ha pogut establir la connexió amb Data.\n"
 #define	MSG_CONN_DATA_OK		MSG_CONN_OK "Connexió amb Data realitzada correctament.\n"
 #define	MSG_WRONG_ARGS			MSG_CONFIG_KO "El format de la crida és incorrecte, ha de ser:\n\tenterprise\t<config_file.dat>\t<menu_file.dat>\n"
+#define	MSG_PIC_DOWN			MSG_CONN_KO "Picard ha caigut.\n"
 
 #define	MSG_CONN_IN				ANSI_COLOR_GREEN "[Petició de connexió]\n" ANSI_COLOR_RESET
 #define	MSG_CONN_PIC			MSG_CONN_OK "Connectant %s\n"
 
-#define	MSG_DISC_IN				ANSI_COLOR_GREEN "[Petició de desconnexió] " ANSI_COLOR_RESET
+#define	MSG_DISC_IN				ANSI_COLOR_GREEN "[Petició de desconnexió]\n" ANSI_COLOR_RESET
 #define	MSG_DISC_PIC			MSG_CONN_OK "Desconnectant %s\n"
 
 #define	MSG_SHOW_MENU_IN		ANSI_COLOR_GREEN "[Petició de menú]\n" ANSI_COLOR_RESET

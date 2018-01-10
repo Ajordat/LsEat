@@ -35,7 +35,8 @@ void readConfigFile(char *filename) {
 }
 
 /**
- * Funció d'escolta del socket. Bloqueja l'execució esperant que un client es connecti al seu port. No és dedicat (de moment almenys).
+ * Funció d'escolta del socket. Bloqueja l'execució esperant que un client es connecti al port de Picard o d'Enterprise.
+ * No és dedicat.
  *
  * @param sock 	Socket a escoltar
  */
@@ -171,7 +172,6 @@ void disconnectEnterprise(int sock, const char *data) {
 
 /**
  * Funció per executar les peticions dels clients a partir del camp type de la trama.
- * De moment només rep connexions de Picard.
  *
  * @param sock 	Socket de la connexió amb el client
  */
@@ -258,7 +258,7 @@ Enterprise parseEnterprise(const char *data) {
 }
 
 /**
- * Funció per tractar les peticions de connexió. De moment només en rep per part dels Picards.
+ * Funció per tractar les peticions de connexió, tant de Picard com d'enterprise.
  *
  * @param sock 		Socket de connexió amb el client
  * @param frame 	Trama rebuda del client amb la seva informació.
@@ -331,7 +331,7 @@ Frame getEnterpriseConnection() {
 	}
 
 	HEAP_print(minheap);
-	ent = HEAP_consulta(&minheap);	//TODO: Comprovar si és vàlid
+	ent = HEAP_consulta(&minheap);
 	HEAP_print(minheap);
 
 	if (ent.time < 0){

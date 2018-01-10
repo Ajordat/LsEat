@@ -55,18 +55,51 @@ int sock_enterprise;
 MinHeap minheap;
 
 
+/**
+ * Llegeix el fitxer de configuració que conté la seva ip i els dos ports pels Picards i els Enterprise.
+ *
+ * @param filename 	Nom del fitxer de configuració
+ */
 void readConfigFile(char *filename);
 
+/**
+ * Funció per executar les peticions dels clients a partir del camp type de la trama.
+ *
+ * @param sock 	Socket de la connexió amb el client
+ */
 void attendPetition(int sock);
 
+/**
+ * Funció d'escolta del socket. Bloqueja l'execució esperant que un client es connecti al port de Picard o d'Enterprise.
+ * No és dedicat.
+ *
+ * @param sock 	Socket a escoltar
+ */
 void listenServerSockets();
 
+/**
+ * Funció per tractar les peticions de connexió, tant de Picard com d'enterprise.
+ *
+ * @param sock 		Socket de connexió amb el client
+ * @param frame 	Trama rebuda del client amb la seva informació.
+ */
 void connectSocket(int sock, Frame frame);
 
+/**
+ * Genera la trama de resposta al client amb la direcció ip i port d'un Enterprise, si tot ha anat bé.
+ *
+ * @return 	Trama a respondre al client
+ */
 Frame getEnterpriseConnection();
 
+/**
+ * Funció per alliberar els recursos del programa.
+ */
 void freeResources();
 
+/**
+ * Funció per a capturar el signal SIGINT i alliberar els recursos abans d'aturar l'execució.
+ */
 void controlSigint();
 
 

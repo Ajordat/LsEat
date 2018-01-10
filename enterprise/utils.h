@@ -16,13 +16,7 @@
 
 void debug(char *msg);
 
-void print(char *msg);
-
-void println(char *msg);
-
-void printi(int num);
-
-void printc(char msg);
+void print(const char *msg);
 
 char *readFileDescriptor(int fd);
 

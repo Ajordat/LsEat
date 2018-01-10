@@ -19,7 +19,7 @@ void debug(char *msg) {
  *
  * @param msg 	Missatge a mostrar
  */
-void print(char *msg) {
+void print(const char *msg) {
 	write(STDOUT_FILENO, msg, strlen(msg));
 }
 

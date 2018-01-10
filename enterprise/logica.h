@@ -46,7 +46,6 @@ Config config;
 Menu menu;
 int sock_data;
 int sock_picard;
-//int fiUpdate;
 pthread_t update;
 pthread_mutex_t mutUsers;
 pthread_mutex_t mutMenu;
